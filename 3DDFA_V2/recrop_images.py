@@ -166,7 +166,7 @@ def find_center_bbox(roi_box_lst, w, h):
 
 
 def main(args):
-    cfg = yaml.load(open(args.config), Loader=yaml.SafeLoader)
+    cfg = yaml.load(open(args.config), Loader=yaml.SafeLoader) #mb05_120x120
 
     # Init FaceBoxes and TDDFA, recommend using onnx flag
     if args.onnx:
@@ -185,7 +185,7 @@ def main(args):
 
 
     with open(args.input_path, "rb") as f:
-        inputs = pickle.load(f, encoding="latin1").items()
+        inputs = pickle.load(f, encoding="latin1").items() # this input file is a dict. each item in the list is a tuple (img_path, landmarks)
 
 
 
@@ -195,13 +195,13 @@ def main(args):
     for i,item in enumerate(tqdm(inputs)):
 
         # get initial cropping box(quad) using landmarks
-        img_path, landmarks = item
+        img_path, landmarks = item #img_path: str, landmarks: np.ndarray
         img_path = args.prefix + img_path
         img_orig = cv2.imread(img_path, flags=cv2.IMREAD_COLOR)
         if img_orig is None:
             print(f'Cannot load image')
             continue
-        quad, quad_c, quad_x, quad_y = get_crop_bound(landmarks)
+        quad, quad_c, quad_x, quad_y = get_crop_bound(landmarks) # 没有考虑旋转
 
         skip = False
         for iteration in range(1):

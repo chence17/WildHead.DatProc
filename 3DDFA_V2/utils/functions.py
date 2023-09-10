@@ -86,14 +86,14 @@ def parse_roi_box_from_bbox(bbox):
     left, top, right, bottom = bbox[:4]
     old_size = (right - left + bottom - top) / 2
     center_x = right - (right - left) / 2.0
-    center_y = bottom - (bottom - top) / 2.0 + old_size * 0.14
+    center_y = bottom - (bottom - top) / 2.0 + old_size * 0.14 # for some reason they add 14% of the old size to the y coordinate
     size = int(old_size * 1.58)
 
     roi_box = [0] * 4
-    roi_box[0] = center_x - size / 2
-    roi_box[1] = center_y - size / 2
-    roi_box[2] = roi_box[0] + size
-    roi_box[3] = roi_box[1] + size
+    roi_box[0] = center_x - size / 2 # min_x
+    roi_box[1] = center_y - size / 2 # min_y
+    roi_box[2] = roi_box[0] + size # max_x
+    roi_box[3] = roi_box[1] + size # max_y
 
     return roi_box
 
