@@ -271,7 +271,7 @@ def main(args):
             quad_y = quad_y * s
             c, x, y = quad_c, quad_x, quad_y
             quad = np.stack([c - x - y, c - x + y, c + x + y, c + x - y]).astype(np.float32)
-            
+
 
         if skip:
             continue
@@ -321,4 +321,3 @@ if __name__ == '__main__':
     args = parser.parse_args()
     main(args)
 
-    
