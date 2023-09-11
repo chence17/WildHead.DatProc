@@ -1,5 +1,6 @@
 import os
 import cv2
+import dlib
 import json
 import torch
 import argparse
@@ -33,6 +34,7 @@ def get_images(data_path, target_file_exts=['.jpg', '.png']):
                 photo_path = os.path.join(root, file)
                 img_paths.append(photo_path)
     return img_paths
+
 
 @nb.njit('int64[:](float32[:,:], float32[:], float32, bool_)', fastmath=True, cache=True)
 def nms_cpu(boxes, confs, nms_thresh, min_mode):
@@ -181,9 +183,34 @@ class FaceAlignmentDetector():
                 return None 
         return landmarks[0][max_score_idx][:, :2] + image_upper_right
 
+class DlibDetector():
+    def __init__(self, weight_file="/home/shitianhao/project/DatProc/3DDFA_V2/weights/shape_predictor_68_face_landmarks.dat", score_thres=0.85) -> None:
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.detector = dlib.get_frontal_face_detector()
+        self.predictor = dlib.shape_predictor(weight_file)
+        self.score_thres = score_thres
+    
+    def __call__(self, image_data: np.ndarray, isBGR: bool, image_upper_right:np.array) -> np.ndarray:
+        # The image_data here is a cropped region from original image.
+        # The output of this function is the absolute coorinate of landmarks in the image
+        image_data = cv2.cvtColor(image_data, cv2.COLOR_BGR2GRAY) if isBGR else cv2.cvtColor(image_data, cv2.COLOR_RGB2GRAY)
+        rects = self.detector(image_data, 1) # detect face
+        for (i, rect) in enumerate(rects):
+            shape = self.predictor(image_data, rect)
+            landmarks = [np.array([p.x, p.y]) for p in shape.parts()]
+        if landmarks[0] is None:
+            return None
+        else:
+            scores = np.array(landmarks[1])
+            scores = np.mean(scores, axis=1)
+            max_score = np.max(scores)
+            max_score_idx = np.argmax(scores)
+            if max_score < self.score_thres:
+                return None 
+        return landmarks[0][max_score_idx][:, :2] + image_upper_right
 
 if __name__ == '__main__':
     img_pth = '/home/shitianhao/project/DatProc/assets/mh_dataset/2.jpg'
     img = cv2.imread(img_pth)
-    fad = FaceAlignmentDetector()
+    fad = DlibDetector()
     fad(img, isBGR=True)
