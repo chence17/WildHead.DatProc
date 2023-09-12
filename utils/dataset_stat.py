@@ -162,7 +162,7 @@ class YoloHeadDetector(object):
         return np.array(image_data_heads_).astype(np.float32)
 
 class FaceAlignmentDetector():
-    def __init__(self, score_thres=0.85) -> None:
+    def __init__(self, score_thres=0.8) -> None:
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.detector = face_alignment.FaceAlignment(face_alignment.LandmarksType.THREE_D, flip_input=False, device=device, face_detector='sfd')
         self.score_thres = score_thres
@@ -173,15 +173,18 @@ class FaceAlignmentDetector():
         if isBGR: image_data = cv2.cvtColor(image_data, cv2.COLOR_BGR2RGB)
         landmarks = self.detector.get_landmarks_from_image(image_data, return_landmark_score=True)
         if landmarks[0] is None:
+            print("No face detected!")
             return None
         else:
             scores = np.array(landmarks[1])
             scores = np.mean(scores, axis=1)
             max_score = np.max(scores)
             max_score_idx = np.argmax(scores)
+            print(max_score)
             if max_score < self.score_thres:
-                return None 
-        return landmarks[0][max_score_idx][:, :2] + image_upper_right
+                print("Score is too low!")
+                return None
+        return landmarks[0][max_score_idx][:, :2] + image_upper_right if image_upper_right is not None else landmarks[0][max_score_idx][:, :2]
 
 class DlibDetector():
     def __init__(self, weight_file="/home/shitianhao/project/DatProc/3DDFA_V2/weights/shape_predictor_68_face_landmarks.dat", score_thres=0.85) -> None:
@@ -195,22 +198,12 @@ class DlibDetector():
         # The output of this function is the absolute coorinate of landmarks in the image
         image_data = cv2.cvtColor(image_data, cv2.COLOR_BGR2GRAY) if isBGR else cv2.cvtColor(image_data, cv2.COLOR_RGB2GRAY)
         rects = self.detector(image_data, 1) # detect face
-        for (i, rect) in enumerate(rects):
-            shape = self.predictor(image_data, rect)
-            landmarks = [np.array([p.x, p.y]) for p in shape.parts()]
-        if landmarks[0] is None:
-            return None
-        else:
-            scores = np.array(landmarks[1])
-            scores = np.mean(scores, axis=1)
-            max_score = np.max(scores)
-            max_score_idx = np.argmax(scores)
-            if max_score < self.score_thres:
-                return None 
-        return landmarks[0][max_score_idx][:, :2] + image_upper_right
+        if len(rects) == 0: return None
+        # since dlib doesn't provide API to measure the confidence of face detection, we use the first face detected
+        shape = self.predictor(image_data, rects[0])
+        landmarks = [np.array([p.x, p.y]) + image_upper_right for p in shape.parts()]
+        return landmarks
 
 if __name__ == '__main__':
-    img_pth = '/home/shitianhao/project/DatProc/assets/mh_dataset/2.jpg'
-    img = cv2.imread(img_pth)
-    fad = DlibDetector()
-    fad(img, isBGR=True)
+    hdet = YoloHeadDetector(weights_file='assets/224x224_yolov4_hddet_480x640.onnx',
+                            input_width=640, input_height=480)
