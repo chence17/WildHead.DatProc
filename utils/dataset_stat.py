@@ -35,7 +35,6 @@ def get_images(data_path, target_file_exts=['.jpg', '.png']):
                 img_paths.append(photo_path)
     return img_paths
 
-
 @nb.njit('int64[:](float32[:,:], float32[:], float32, bool_)', fastmath=True, cache=True)
 def nms_cpu(boxes, confs, nms_thresh, min_mode):
     x1 = boxes[:, 0]
@@ -115,6 +114,20 @@ def recover_original_box(head_box, pad_list, original_hw):
     image_head_width, image_head_height = 2. * half_w, 2. * half_h
     return np.array([x1, y1, image_head_width, image_head_height, head_box[4]]).astype(np.float32)
 
+def rescale_headbox(box, image_w, image_h, factor=1.2):
+    # expected input: [x_min, y_min, w, h]
+    # image_w, image_h: original image size
+    # return [x_min, y_min, w, h, w*h]
+    x_min = max(box[0] - (factor - 1) * box[2] / 2, 0)
+    y_min = max(box[1] - (factor - 1) * box[3] / 2, 0)
+    x_max = min(box[0] + box[2] + (factor - 1) * box[2] / 2, image_w)
+    y_max = min(box[1] + box[3] + (factor - 1) * box[3] / 2, image_h)
+    w = x_max - x_min
+    h = y_max - y_min
+    return np.array([x_min, y_min, w, h, w*h]).astype(np.float32)
+
+
+
 class YoloHeadDetector(object):
     def __init__(self, weights_file: str, input_width: int=640, input_height: int=480) -> None:
         self.weights_file = weights_file
@@ -133,7 +146,8 @@ class YoloHeadDetector(object):
         self.conf_thresh = 0.60
         self.nms_thresh = 0.50
 
-    def __call__(self, image_data: np.ndarray, isBGR: bool) -> np.ndarray:
+
+    def __call__(self, image_data: np.ndarray, isBGR: bool, max_box_num=3) -> np.ndarray:
         if isBGR: image_data = cv2.cvtColor(image_data, cv2.COLOR_BGR2RGB)
         image_data_padded, pad_list = resize_and_pad_image(image_data, self.input_hw, pad_value=0)
         image_data_chw = image_data_padded.transpose(2, 0, 1).astype(np.float32) / 255.
@@ -159,7 +173,11 @@ class YoloHeadDetector(object):
         original_hw, image_data_heads_ = image_data.shape[:2], []
         for idx in range(len(image_data_heads)):
             image_data_heads_.append(recover_original_box(image_data_heads[idx], pad_list, original_hw))
-        return np.array(image_data_heads_).astype(np.float32)
+        scaled_boxes = np.apply_along_axis(rescale_headbox, 1, image_data_heads_, image_data.shape[1], image_data.shape[0])
+        filtered_boxes = scaled_boxes[(scaled_boxes[:, 3] >= 512) & (scaled_boxes[:, 2] >= 512)]
+        sorted_indices = np.argsort(filtered_boxes[:, 4])[::-1]
+        filtered_boxes = filtered_boxes[sorted_indices]
+        return filtered_boxes[:max_box_num, :4].astype(np.int32)
 
 class FaceAlignmentDetector():
     def __init__(self, score_thres=0.8) -> None:
@@ -207,3 +225,6 @@ class DlibDetector():
 if __name__ == '__main__':
     hdet = YoloHeadDetector(weights_file='assets/224x224_yolov4_hddet_480x640.onnx',
                             input_width=640, input_height=480)
+    
+    img = cv2.imread("/home/shitianhao/project/DatProc/assets/mh_dataset/5.png")
+    boxes = hdet(img, isBGR=True)
