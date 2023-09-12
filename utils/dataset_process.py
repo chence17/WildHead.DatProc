@@ -126,8 +126,6 @@ def rescale_headbox(box, image_w, image_h, factor=1.2):
     h = y_max - y_min
     return np.array([x_min, y_min, w, h, w*h]).astype(np.float32)
 
-
-
 class YoloHeadDetector(object):
     def __init__(self, weights_file: str, input_width: int=640, input_height: int=480) -> None:
         self.weights_file = weights_file
@@ -179,6 +177,9 @@ class YoloHeadDetector(object):
         filtered_boxes = filtered_boxes[sorted_indices]
         return filtered_boxes[:max_box_num, :4].astype(np.int32)
 
+
+
+
 class FaceAlignmentDetector():
     def __init__(self, score_thres=0.8) -> None:
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -225,6 +226,14 @@ class DlibDetector():
 if __name__ == '__main__':
     hdet = YoloHeadDetector(weights_file='assets/224x224_yolov4_hddet_480x640.onnx',
                             input_width=640, input_height=480)
-    
+    d_det= DlibDetector()
     img = cv2.imread("/home/shitianhao/project/DatProc/assets/mh_dataset/5.png")
     boxes = hdet(img, isBGR=True)
+    print(boxes)
+    for box in boxes:
+        x1, y1, w, h = box
+        x2, y2 = x1 + w, y1 + h
+        cv2.rectangle(img, (x1, y1), (x2, y2), (0, 0, 255))
+        # detect face
+        dets = d_det(img[y1:y2, x1:x2], isBGR=True, image_upper_right=np.array([x1, y1]))
+        
