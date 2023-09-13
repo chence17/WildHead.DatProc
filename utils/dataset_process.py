@@ -183,7 +183,7 @@ class FaceAlignmentDetector():
         self.detector = face_alignment.FaceAlignment(face_alignment.LandmarksType.THREE_D, flip_input=False, device=device, face_detector='sfd')
         self.score_thres = score_thres
     
-    def __call__(self, image_data: np.ndarray, isBGR: bool, image_upper_right:np.array) -> np.ndarray:
+    def __call__(self, image_data: np.ndarray, isBGR: bool, image_upper_right=None) -> np.ndarray:
         # The image_data here is a cropped region from original image.
         # The output of this function is the absolute coorinate of landmarks in the image
         if isBGR: image_data = cv2.cvtColor(image_data, cv2.COLOR_BGR2RGB)
@@ -219,7 +219,101 @@ class DlibDetector():
         shape = self.predictor(image_data, rects[0])
         landmarks = [np.array([p.x, p.y]) + image_upper_right for p in shape.parts()]
         return landmarks
+    
+class Recropper:
+    def __init__(self, args, config_file='/home/shitianhao/project/DatProc/3DDFA_V2/configs/mb1_120x120.yml', use_onnx=False, mode='gpu'):
+        self.args = args
+        self.cfg = yaml.load(open(config_file), Loader=yaml.SafeLoader)
+        self.size = 512
+        # Initialize FaceBoxes and TDDFA
+        if use_onnx:
+            os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+            os.environ['OMP_NUM_THREADS'] = '4'
+            from FaceBoxes.FaceBoxes_ONNX import FaceBoxes_ONNX
+            from TDDFA_ONNX import TDDFA_ONNX
+            self.face_boxes = FaceBoxes_ONNX()
+            self.tddfa = TDDFA_ONNX(**self.cfg)
+        else:
+            gpu_mode = mode == 'gpu'
+            self.tddfa = TDDFA(gpu_mode=gpu_mode, **self.cfg)
+            self.face_boxes = FaceBoxes()
 
+    def __call__(self, image_data, landmarks):
+            quad, quad_c, quad_x, quad_y = get_crop_bound(landmarks)
+            for iteration in range(1):
+                bound = np.array([[0, 0], [0, self.size-1], [self.size-1, self.size-1], [self.size-1, 0]], dtype=np.float32)
+                mat = cv2.getAffineTransform(quad[:3], bound[:3])
+                img = crop_image(image_data, mat, self.size, self.size)
+                h, w = img.shape[:2]
+
+                # Detect faces, get 3DMM params and roi boxes
+                boxes = self.face_boxes(img)
+                if len(boxes) == 0:
+                    print(f'No face detected')
+                    break
+
+                param_lst, roi_box_lst = self.tddfa(img, boxes)
+                box_idx = find_center_bbox(roi_box_lst, w, h)
+
+
+                param = param_lst[box_idx]
+                P = param[:12].reshape(3, -1)  # camera matrix
+                s_relative, R, t3d = P2sRt(P)
+                pose = matrix2angle(R)
+                pose = [p * 180 / np.pi for p in pose]
+
+                # Adjust z-translation in object space
+                R_ = param[:12].reshape(3, -1)[:, :3]
+                u = self.tddfa.bfm.u.reshape(3, -1, order='F')
+                trans_z = np.array([ 0, 0, 0.5*u[2].mean() ]) # Adjust the object center
+                trans = np.matmul(R_, trans_z.reshape(3,1))
+                t3d += trans.reshape(3)
+
+                ''' Camera extrinsic estimation for GAN training '''
+                # Normalize P to fit in the original image (before 3DDFA cropping)
+                sx, sy, ex, ey = roi_box_lst[0]
+                scale_x = (ex - sx) / self.tddfa.size
+                scale_y = (ey - sy) / self.tddfa.size
+                t3d[0] = (t3d[0]-1) * scale_x + sx
+                t3d[1] = (self.tddfa.size-t3d[1]) * scale_y + sy
+                t3d[0] = (t3d[0] - 0.5*(w-1)) / (0.5*(w-1)) # Normalize to [-1,1]
+                t3d[1] = (t3d[1] - 0.5*(h-1)) / (0.5*(h-1)) # Normalize to [-1,1], y is flipped for image space
+                t3d[1] *= -1
+                t3d[2] = 0 # orthogonal camera is agnostic to Z (the model always outputs 66.67)
+
+                s_relative = s_relative * 2000
+                scale_x = (ex - sx) / (w-1)
+                scale_y = (ey - sy) / (h-1)
+                s = (scale_x + scale_y) / 2 * s_relative
+                # print(f"[{iteration}] s={s} t3d={t3d}")
+
+                if s < 0.7 or s > 1.3:
+                    break
+                if abs(pose[0]) > 90 or abs(pose[1]) > 80 or abs(pose[2]) > 50:
+                    break
+                if abs(t3d[0]) > 1. or abs(t3d[1]) > 1.:
+                    break
+
+                quad_c = quad_c + quad_x * t3d[0]
+                quad_c = quad_c - quad_y * t3d[1]
+                quad_x = quad_x * s
+                quad_y = quad_y * s
+                c, x, y = quad_c, quad_x, quad_y
+                quad = np.stack([c - x - y, c - x + y, c + x + y, c + x - y]).astype(np.float32)
+
+            # final projection matrix
+            s = 1
+            t3d = 0 * t3d
+            R[:,:3] = R[:,:3] * s
+            P = np.concatenate([R,t3d[:,None]],1)
+            P = np.concatenate([P, np.array([[0,0,0,1.]])],0)
+            camera_poses = eg3dcamparams(P.flatten())
+
+            # Save cropped images
+            cropped_img = crop_final(image_data, size=self.size, quad=quad)
+            return cropped_img, camera_poses, quad
+    
+    
 if __name__ == '__main__':
     hdet = YoloHeadDetector(weights_file='assets/224x224_yolov4_hddet_480x640.onnx',
                             input_width=640, input_height=480)

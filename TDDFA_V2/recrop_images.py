@@ -11,8 +11,8 @@ import numpy as np
 import json
 import pickle
 
-from FaceBoxes import FaceBoxes
-from TDDFA import TDDFA
+from .FaceBoxes import FaceBoxes
+from .TDDFA import TDDFA
 from utils.render import render
 #from utils.render_ctypes import render  # faster
 from utils.depth import depth
