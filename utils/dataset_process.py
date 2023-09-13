@@ -177,9 +177,6 @@ class YoloHeadDetector(object):
         filtered_boxes = filtered_boxes[sorted_indices]
         return filtered_boxes[:max_box_num, :4].astype(np.int32)
 
-
-
-
 class FaceAlignmentDetector():
     def __init__(self, score_thres=0.8) -> None:
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
