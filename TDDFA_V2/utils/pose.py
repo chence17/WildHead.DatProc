@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 from math import cos, sin, atan2, asin, sqrt
 
-from .functions import calc_hypotenuse, plot_image
+from TDDFA_V2.utils.functions import calc_hypotenuse, plot_image
 
 
 def P2sRt(P):

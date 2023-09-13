@@ -7,17 +7,17 @@ import argparse
 import cv2
 import yaml
 
-from FaceBoxes import FaceBoxes
-from TDDFA import TDDFA
-from utils.render import render
-#from utils.render_ctypes import render  # faster
-from utils.depth import depth
-from utils.pncc import pncc
-from utils.uv import uv_tex
-from utils.pose import viz_pose
-from utils.serialization import ser_to_ply, ser_to_obj
-from utils.functions import draw_landmarks, get_suffix
-from utils.tddfa_util import str2bool
+from TDDFA_V2.FaceBoxes import FaceBoxes
+from TDDFA_V2.TDDFA import TDDFA
+from TDDFA_V2.utils.render import render
+#from TDDFA_V2.utils.render_ctypes import render  # faster
+from TDDFA_V2.utils.depth import depth
+from TDDFA_V2.utils.pncc import pncc
+from TDDFA_V2.utils.uv import uv_tex
+from TDDFA_V2.utils.pose import viz_pose
+from TDDFA_V2.utils.serialization import ser_to_ply, ser_to_obj
+from TDDFA_V2.utils.functions import draw_landmarks, get_suffix
+from TDDFA_V2.utils.tddfa_util import str2bool
 
 
 def main(args):

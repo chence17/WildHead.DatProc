@@ -6,13 +6,13 @@ import torch
 import numpy as np
 import cv2
 
-from .utils.prior_box import PriorBox
-from .utils.nms_wrapper import nms
-from .utils.box_utils import decode
-from .utils.timer import Timer
-from .utils.functions import check_keys, remove_prefix, load_model
-from .utils.config import cfg
-from .models.faceboxes import FaceBoxesNet
+from TDDFA_V2.FaceBoxes.utils.prior_box import PriorBox
+from TDDFA_V2.FaceBoxes.utils.nms_wrapper import nms
+from TDDFA_V2.FaceBoxes.utils.box_utils import decode
+from TDDFA_V2.FaceBoxes.utils.timer import Timer
+from TDDFA_V2.FaceBoxes.utils.functions import check_keys, remove_prefix, load_model
+from TDDFA_V2.FaceBoxes.utils.config import cfg
+from TDDFA_V2.FaceBoxes.models.faceboxes import FaceBoxesNet
 
 # some global configs
 confidence_threshold = 0.05

@@ -10,13 +10,13 @@ import torch
 from torchvision.transforms import Compose
 import torch.backends.cudnn as cudnn
 
-from . import models
-from .bfm import BFMModel
-from .utils.io import _load
-from .utils.functions import (
+from TDDFA_V2 import models
+from TDDFA_V2.bfm import BFMModel
+from TDDFA_V2.utils.io import _load
+from TDDFA_V2.utils.functions import (
     crop_img, parse_roi_box_from_bbox, parse_roi_box_from_landmark,
 )
-from .utils.tddfa_util import (
+from TDDFA_V2.utils.tddfa_util import (
     load_model, _parse_param, similar_transform,
     ToTensorGjz, NormalizeGjz
 )
@@ -32,7 +32,7 @@ class TDDFA(object):
 
         # load BFM
         self.bfm = BFMModel(
-            bfm_fp=kvs.get('bfm_fp', make_abs_path('configs/bfm_noneck_v3.pkl')),
+            bfm_fp=kvs.get('bfm_fp', make_abs_path('TDDFA_V2/configs/bfm_noneck_v3.pkl')),
             shape_dim=kvs.get('shape_dim', 40),
             exp_dim=kvs.get('exp_dim', 10)
         )

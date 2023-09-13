@@ -1,6 +1,14 @@
+'''
+Author: chence antonio.chan.cc@outlook.com
+Date: 2023-09-13 19:30:32
+LastEditors: chence antonio.chan.cc@outlook.com
+LastEditTime: 2023-09-13 19:47:39
+FilePath: /DatProc/TDDFA_V2/bfm/bfm.py
+Description: bfm.py
+'''
 # coding: utf-8
 
-from utils.io import _load
+from TDDFA_V2.utils.io import _load
 import numpy as np
 import os.path as osp
 __author__ = 'cleardusk'

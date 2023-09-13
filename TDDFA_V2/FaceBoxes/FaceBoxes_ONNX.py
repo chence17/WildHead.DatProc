@@ -6,12 +6,12 @@ import torch
 import numpy as np
 import cv2
 
-from .utils.prior_box import PriorBox
-from .utils.nms_wrapper import nms
-from .utils.box_utils import decode
-from .utils.timer import Timer
-from .utils.config import cfg
-from .onnx import convert_to_onnx
+from TDDFA_V2.FaceBoxes.utils.prior_box import PriorBox
+from TDDFA_V2.FaceBoxes.utils.nms_wrapper import nms
+from TDDFA_V2.FaceBoxes.utils.box_utils import decode
+from TDDFA_V2.FaceBoxes.utils.timer import Timer
+from TDDFA_V2.FaceBoxes.utils.config import cfg
+from TDDFA_V2.FaceBoxes.onnx import convert_to_onnx
 
 import onnxruntime
 

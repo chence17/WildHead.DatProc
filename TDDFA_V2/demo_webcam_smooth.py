@@ -10,11 +10,11 @@ from tqdm import tqdm
 import yaml
 from collections import deque
 
-from FaceBoxes import FaceBoxes
-from TDDFA import TDDFA
-from utils.render import render
-# from utils.render_ctypes import render
-from utils.functions import cv_draw_landmark
+from TDDFA_V2.FaceBoxes import FaceBoxes
+from TDDFA_V2.TDDFA import TDDFA
+from TDDFA_V2.utils.render import render
+# from TDDFA_V2.utils.render_ctypes import render
+from TDDFA_V2.utils.functions import cv_draw_landmark
 
 
 def main(args):

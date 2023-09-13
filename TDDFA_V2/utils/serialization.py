@@ -4,8 +4,8 @@ __author__ = 'cleardusk'
 
 import numpy as np
 
-from .tddfa_util import _to_ctype
-from .functions import get_suffix
+from TDDFA_V2.utils.tddfa_util import _to_ctype
+from TDDFA_V2.utils.functions import get_suffix
 
 header_temp = """ply
 format ascii 1.0

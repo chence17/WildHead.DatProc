@@ -1,3 +1,11 @@
+'''
+Author: chence antonio.chan.cc@outlook.com
+Date: 2023-09-13 19:30:32
+LastEditors: chence antonio.chan.cc@outlook.com
+LastEditTime: 2023-09-13 20:02:32
+FilePath: /DatProc/TDDFA_V2/utils/render.py
+Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+'''
 # coding: utf-8
 
 __author__ = 'cleardusk'
@@ -9,9 +17,9 @@ sys.path.append('..')
 import cv2
 import numpy as np
 
-from Sim3DR import RenderPipeline
-from utils.functions import plot_image
-from .tddfa_util import _to_ctype
+from TDDFA_V2.Sim3DR import RenderPipeline
+from TDDFA_V2.utils.functions import plot_image
+from TDDFA_V2.utils.tddfa_util import _to_ctype
 
 cfg = {
     'intensity_ambient': 0.3,

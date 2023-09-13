@@ -1,3 +1,11 @@
+'''
+Author: chence antonio.chan.cc@outlook.com
+Date: 2023-09-13 19:30:32
+LastEditors: chence antonio.chan.cc@outlook.com
+LastEditTime: 2023-09-13 19:47:18
+FilePath: /DatProc/TDDFA_V2/bfm/bfm_onnx.py
+Description: bfm_onnx.py
+'''
 # coding: utf-8
 
 __author__ = 'cleardusk'
@@ -11,7 +19,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from utils.io import _load, _numpy_to_cuda, _numpy_to_tensor
+from TDDFA_V2.utils.io import _load, _numpy_to_cuda, _numpy_to_tensor
 
 make_abs_path = lambda fn: osp.join(osp.dirname(osp.realpath(__file__)), fn)
 
