@@ -38,7 +38,6 @@ def process(img_path, dataset_path, hdet):
     save_path = os.path.relpath(img_path, dataset_path)
     return save_path, format_headbox(img_boxes) 
 
-
 def main(args):
     # initialize detectors
     hdet = YoloHeadDetector(weights_file='assets/224x224_yolov4_hddet_480x640.onnx',
@@ -70,7 +69,7 @@ def main(args):
         meta_dict[img_path] = hbox_dict
 
     with open(out_json_path, 'w') as f:
-        json.dump({args.dataset_path: meta_dict}, f, indent=4)
+        json.dump({os.path.realpath(args.dataset_path): meta_dict}, f, indent=4)
 
         
 
