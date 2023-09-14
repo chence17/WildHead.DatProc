@@ -29,12 +29,14 @@ def detect_head(img_path, hdet):
 def format_headbox(img_boxes):
     hbox_dict = {}
     for idx, box in enumerate(img_boxes):
-        hbox_dict[f'{idx:02d}'] = box
+        hbox_dict[f'{idx:02d}'] = box.tolist()
     return hbox_dict
 
-def process(img_path, hdet):
+def process(img_path, dataset_path, hdet):
     img_boxes = detect_head(img_path, hdet)
-    return img_path, format_headbox(img_boxes) if img_boxes is None else None
+    if img_boxes is None: return img_path, None
+    save_path = os.path.relpath(img_path, dataset_path)
+    return save_path, format_headbox(img_boxes) 
 
 
 def main(args):
@@ -42,33 +44,33 @@ def main(args):
     hdet = YoloHeadDetector(weights_file='assets/224x224_yolov4_hddet_480x640.onnx',
                             input_width=640, input_height=480)
 
-    data_path = args.dataset_path
-    assert os.path.exists(data_path), 'data path does not exist'
+    dataset_path = args.dataset_path
+    assert os.path.exists(dataset_path), 'data path does not exist'
 
     # output configs
-    data_name = os.path.basename(data_path)
+    data_name = os.path.basename(dataset_path)
     out_json_name = data_name + '_stat.json'
     out_json_path = os.path.join(args.output_dir, out_json_name)
 
     # search through dataset dir and get all image formats
-    extensions = get_all_extensions(data_path)
+    extensions = get_all_extensions(dataset_path)
     print(f'Found extensions: {extensions}')
     IMG_FORMATS = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp", ".svg", ".ico", ".exif", ".raw", ".heic", ".jfif", ".tga", ".pdf", ".eps", ".ai", ".psd"]
     extensions = list(set(extensions).intersection(set(IMG_FORMATS)))
     print(f'Found image extensions: {extensions}')
 
-    img_paths = get_images(data_path, extensions)
+    img_paths = get_images(dataset_path, extensions)
     meta_dict = {}
 
     with ThreadPoolExecutor(max_workers=args.num_processes) as executor:
-        results = list(tqdm(executor.map(lambda x: process(x, hdet), img_paths), total=len(img_paths)))
+        results = list(tqdm(executor.map(lambda x: process(x,dataset_path, hdet), img_paths), total=len(img_paths)))
 
     for img_path, hbox_dict in tqdm(results):
         if hbox_dict is None: continue
         meta_dict[img_path] = hbox_dict
 
     with open(out_json_path, 'w') as f:
-        json.dump(meta_dict, f, indent=4)
+        json.dump({args.dataset_path: meta_dict}, f, indent=4)
 
         
 
