@@ -49,14 +49,14 @@ def eg3dcamparams(R_in):
     return label_new
 
 def get_crop_bound(lm, method="ffhq"):
-    if len(lm) == 106:
+    if lm.shape[0] == 106:
         left_e = lm[104]
         right_e = lm[105]
         nose = lm[49]
         left_m = lm[84]
         right_m = lm[90]
         center = (lm[1] + lm[31]) * 0.5
-    elif len(lm) == 68:
+    elif lm.shape[0] == 68:
         left_e = np.mean(lm[36:42], axis=0)
         right_e = np.mean(lm[42:48], axis=0)
         nose = lm[33]
@@ -166,16 +166,15 @@ def find_center_bbox(roi_box_lst, w, h):
 
 
 class Recropper:
-    def __init__(self, args, config_file='/home/shitianhao/project/DatProc/3DDFA_V2/configs/mb1_120x120.yml', use_onnx=False, mode='gpu'):
-        self.args = args
+    def __init__(self, config_file='/home/shitianhao/project/DatProc/TDDFA_V2/configs/mb1_120x120.yml', use_onnx=False, mode='gpu'):
         self.cfg = yaml.load(open(config_file), Loader=yaml.SafeLoader)
         self.size = 512
         # Initialize FaceBoxes and TDDFA
         if use_onnx:
             os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
             os.environ['OMP_NUM_THREADS'] = '4'
-            from FaceBoxes.FaceBoxes_ONNX import FaceBoxes_ONNX
-            from TDDFA_ONNX import TDDFA_ONNX
+            from TDDFA_V2.FaceBoxes.FaceBoxes_ONNX import FaceBoxes_ONNX
+            from TDDFA_V2.TDDFA_ONNX import TDDFA_ONNX
             self.face_boxes = FaceBoxes_ONNX()
             self.tddfa = TDDFA_ONNX(**self.cfg)
         else:
@@ -267,8 +266,8 @@ def main(args):
         os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
         os.environ['OMP_NUM_THREADS'] = '4'
 
-        from FaceBoxes.FaceBoxes_ONNX import FaceBoxes_ONNX
-        from TDDFA_ONNX import TDDFA_ONNX
+        from TDDFA_V2.FaceBoxes.FaceBoxes_ONNX import FaceBoxes_ONNX
+        from TDDFA_V2.TDDFA_ONNX import TDDFA_ONNX
 
         face_boxes = FaceBoxes_ONNX()
         tddfa = TDDFA_ONNX(**cfg)

@@ -29,10 +29,10 @@ class TDDFA(object):
 
     def __init__(self, **kvs):
         torch.set_grad_enabled(False)
-
+        print(__file__)
         # load BFM
         self.bfm = BFMModel(
-            bfm_fp=kvs.get('bfm_fp', make_abs_path('TDDFA_V2/configs/bfm_noneck_v3.pkl')),
+            bfm_fp=kvs.get('bfm_fp', make_abs_path('configs/bfm_noneck_v3.pkl')),
             shape_dim=kvs.get('shape_dim', 40),
             exp_dim=kvs.get('exp_dim', 10)
         )
@@ -114,7 +114,7 @@ class TDDFA(object):
             else:
                 param = self.model(inp)
 
-            param = param.squeeze().cpu().numpy().flatten().astype(np.float32)
+            param = param.squeeze().cpu().detach().numpy().flatten().astype(np.float32)
             param = param * self.param_std + self.param_mean  # re-scale
             # print('output', param)
             param_lst.append(param)
