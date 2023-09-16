@@ -52,13 +52,7 @@ def main(args):
     out_json_path = os.path.join(args.output_dir, out_json_name)
 
     # search through dataset dir and get all image formats
-    extensions = get_all_extensions(dataset_path)
-    print(f'Found extensions: {extensions}')
-    IMG_FORMATS = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp", ".svg", ".ico", ".exif", ".raw", ".heic", ".jfif", ".tga", ".pdf", ".eps", ".ai", ".psd"]
-    extensions = list(set(extensions).intersection(set(IMG_FORMATS)))
-    print(f'Found image extensions: {extensions}')
-
-    img_paths = get_images(dataset_path, extensions)
+    img_paths = get_images(dataset_path)
     meta_dict = {}
 
     with ThreadPoolExecutor(max_workers=args.num_processes) as executor:
