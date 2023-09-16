@@ -65,8 +65,10 @@ def main(args):
     print("detecting head boxes")
     for img_path in tqdm(valid_img_paths):
         head_boxes = detect_head(img_path, hdet)
-        if head_boxes: meta_dict[os.path.basename(img_path)] = head_boxes
+        img_path = os.path.relpath(img_path, os.path.realpath(output_dir))
+        if head_boxes: meta_dict[img_path] = head_boxes
 
+    print("saving meta files")
     total_partition = len(meta_dict) // args.partition_size + 1
     for idx, part_dict in tqdm(enumerate(partition_dict(meta_dict, args.partition_size),1)):
         out_json_name = f'meta_{idx}-{total_partition}.json'
