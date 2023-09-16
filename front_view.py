@@ -4,37 +4,55 @@ import json
 import argparse
 import numpy as np
 from tqdm import tqdm
-from concurrent.futures import ThreadPoolExecutor
 
-from utils.dataset_process import FaceAlignmentDetector, ProcessError
+from utils.dataset_process import FaceAlignmentDetector, ProcessError, segment, calc_h2b_ratio
 from recrop_images import Recropper
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Frontal View Pipeline')
-    parser.add_argument('-f', '--file', type=str, help='path to json success_metadata', default='/home/shitianhao/project/DatProc/utils/stats/mh_dataset_stat.json')
-    parser.add_argument('-o', '--output_dir', type=str, help='path to output dir', default='/home/shitianhao/project/DatProc/assets/outputs')
-    parser.add_argument('-j', '--num_processes', type=int, help='number of processes', default=32)
+    parser.add_argument('file', type=str, help='path to json file',
+                        default='/home/shitianhao/project/DatProc/utils/stats/mh_dataset_stat.json')
+    # parser.add_argument('-j', '--num_processes', type=int, help='number of processes', default=32)
     args, _ = parser.parse_known_args()
     return args
 
-def process_image(img_path, image_boxes, dataset_path, dataset_image_out_dir, fdet, recropper):
-    img = cv2.imread(os.path.join(dataset_path, img_path))
-    success_boxes_meta = {}
-    fail_boxes_list = []
-    for box_id, box in tqdm(image_boxes.items(), position=1, leave=False):
+
+def process_image(img_path, meta, fdet, recropper, save_img_dir, save_sem_dir):
+    img = cv2.imread(img_path)
+    for box_id, box_meta in tqdm(meta.items(), position=1, leave=False):
+        box_x, box_y, box_w, box_h = box_meta['head_box']
+        box_image = img[int(box_y):int(box_y+box_h),
+                        int(box_x):int(box_x+box_w)].copy()
         try:
-            box_out_dir = os.path.join(dataset_image_out_dir, f'{img_path[:-4]}_{box_id}{img_path[-4:]}')
-            box_x, box_y, box_w, box_h = box
-            box_image = img[int(box_y):int(box_y+box_h), int(box_x):int(box_x+box_w)].copy()
             landmarks = fdet(box_image, True)
-            if landmarks is None: raise ProcessError  # Filter boxes with failed face detection
-            cropped_img, camera_poses, quad = recropper(box_image, landmarks)
-            camera_poses, quad = camera_poses.tolist(), quad.tolist()
-            cv2.imwrite(box_out_dir, cropped_img)
-            success_boxes_meta[box_id] = {'camera_poses': camera_poses, 'quad': quad}
         except ProcessError:
-            fail_boxes_list.append(box_id)
-    return img_path, success_boxes_meta, image_boxes
+            box_meta['landmarks'] = None
+            box_meta['frontal'] = False
+        else:
+            box_meta['landmarks'] = landmarks.tolist()
+            box_meta['frontal'] = True
+        try:
+            cropped_img, camera_poses, quad = recropper(box_image, landmarks)
+        except ProcessError:
+            box_meta['frontal'] = False
+            box_meta['camera_poses'] = None
+            box_meta['quad'] = None
+        else:
+            img_name = os.path.basename(img_path)
+            save_img_path = os.path.join(
+                save_img_dir, f'{img_name[:-4]}_{box_id}{img_name[-4:]}')
+            cv2.imwrite(save_img_path, cropped_img)
+            mask = segment(cropped_img)
+            save_sem_path = os.path.join(
+                save_sem_dir, f'{img_name[:-4]}_{box_id}{img_name[-4:]}')
+            cv2.imwrite(save_sem_path, mask)
+            box_meta['camera_poses'] = camera_poses.tolist()
+            box_meta['quad'] = quad.tolist()
+            box_meta['h2b_ratio'] = calc_h2b_ratio(mask)
+        meta[box_id] = box_meta
+    return meta
+
 
 def main(args):
     # initialize face detecor and recropper
@@ -43,39 +61,18 @@ def main(args):
     # load metadata file
     with open(args.file, 'r') as f:
         data = json.load(f)
-    # config outputs
-    dataset_path = list(data.keys())[0]
-    dataset_name = os.path.basename(dataset_path)
-    dataset_out_dir = os.path.join(args.output_dir, dataset_name)
-    dataset_image_out_dir = os.path.join(dataset_out_dir, 'images')
-    os.makedirs(dataset_out_dir, exist_ok=True)
-    os.makedirs(dataset_image_out_dir, exist_ok=True)
-    success_metadata_file_path = os.path.join(dataset_out_dir, f'{dataset_name}_success_metadata.json')
-    failed_metadata_file_path = os.path.join(dataset_out_dir, f'{dataset_name}_failed_metadata.json')
+    # output dir
+    json_dir = os.path.dirname(args.file)
+    cropped_img_dir = os.path.join(json_dir, 'cropped_images')
+    cropped_sem_dir = os.path.join(json_dir, 'cropped_semantic')
+    os.makedirs(cropped_img_dir, exist_ok=True)
+    for img_path, meta in tqdm(data.items(), position=0, leave=True):
+        img_path = os.path.join(json_dir, img_path)
+        _meta = process_image(img_path, meta, fdet, recropper, cropped_img_dir, cropped_sem_dir)
+        data[img_path] = _meta
 
-    success_metadata = {}
-    failed_metadata = {}
-    input_images_meta = data[dataset_path].items()
-    with ThreadPoolExecutor(max_workers=args.num_processes) as executor:
-            futures = []
 
-            for img_path, image_boxes in input_images_meta:
-                future = executor.submit(process_image, img_path, image_boxes, dataset_path, dataset_image_out_dir, fdet, recropper)
-                futures.append(future)
 
-            for future in tqdm(futures, position=0, leave=True):
-                img_path, success_boxes_meta, image_boxes = future.result()
-                if len(success_boxes_meta.keys()) > 0:
-                    success_metadata[img_path] = success_boxes_meta
-                else:
-                    failed_metadata[img_path] = image_boxes
-
-    with open(success_metadata_file_path, 'w') as f:
-        json.dump({dataset_image_out_dir:success_metadata}, f, indent=4)
-    with open(failed_metadata_file_path, 'w') as f:
-        json.dump({dataset_path:failed_metadata}, f, indent=4)
-
-                
 if __name__ == '__main__':
     args = parse_args()
     main(args)
