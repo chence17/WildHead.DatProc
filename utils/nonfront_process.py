@@ -360,7 +360,7 @@ for img_name in tqdm.tqdm(backi_valid_keys):
     img_path = osp.join(img_dir, img_name)
     try:
         img_data = cv2.imread(img_path)
-        img_ybbox = detect_head(img_data.copy(), yolov4_head, yolov4_head_H, yolov4_head_W, yolov4_head_input_name, yolov4_head_output_names, conf_thresh, nms_thresh)
+        img_ybbox = i(img_data.copy(), yolov4_head, yolov4_head_H, yolov4_head_W, yolov4_head_input_name, yolov4_head_output_names, conf_thresh, nms_thresh)
         img_yc = np.array([img_ybbox[0], img_ybbox[1]])
         img_yw, img_yh = img_ybbox[2], img_ybbox[3]
         img_ybbox_quad = np.array([
