@@ -5,7 +5,7 @@ import torch
 from PIL import Image
 from torchvision.transforms import ToPILImage
 
-from torchvision.models.segmentation import deeplabv3_resnet101
+from torchvision.models.segmentation import deeplabv3_resnet101, DeepLabV3_ResNet101_Weights
 from torchvision import transforms, utils
 
 
@@ -19,7 +19,7 @@ def get_mask(model, batch, cid):
     boolean_car_masks = (normalized_masks.argmax(1) == cid)
     return boolean_car_masks.float()
 
-image = Image.open('/home/shitianhao/project/DatProc/assets/outputs/mh_dataset/images/0_00.jpg')
+image = Image.open('/home/shitianhao/project/DatProc/assets/outputs/mh_dataset/images/0_01.jpg')
 # Define the preprocessing transformation
 preprocess = transforms.Compose([
     transforms.Resize((512, 512)),
@@ -31,7 +31,7 @@ input_tensor = preprocess(image)
 input_batch = input_tensor.unsqueeze(0).to('cuda:0')
 
 # load segmentation net
-seg_net = deeplabv3_resnet101(progress=False).to('cuda:0')
+seg_net = deeplabv3_resnet101(weights=DeepLabV3_ResNet101_Weights.COCO_WITH_VOC_LABELS_V1, progress=False).to('cuda:0')
 seg_net.requires_grad_(False)
 seg_net.eval()
 
