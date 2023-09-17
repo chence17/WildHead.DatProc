@@ -189,4 +189,4 @@ if __name__ == '__main__':
     # fp.run_ibug(fp.ibug_model_02, img, True, True)
     # fp.run_ibug(fp.ibug_model_03, img, True, True)
     # fp.run_ibug(fp.ibug_model_04, img, True, True)
-    # fp.__call__(img, True, True)
+    # fp.run(img, True, True)
