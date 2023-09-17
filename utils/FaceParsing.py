@@ -148,7 +148,7 @@ class HeadParser(object):
             show_result(ori_img, ori_sem, self.label)
         return ori_sem
 
-    def run(self, ori_img, is_bgr, show: bool = False) -> np.ndarray:
+    def __call__(self, ori_img, is_bgr, show: bool = False) -> np.ndarray:
         fpp_sem = self.run_fpp(self.fpp_transform, self.fpp_model, ori_img, is_bgr, False)
         # ibug_sem_01 = self.run_ibug(self.ibug_model_01, ori_img, is_bgr, False)
         # ibug_sem_02 = self.run_ibug(self.ibug_model_02, ori_img, is_bgr, False)
@@ -167,12 +167,12 @@ class HeadParser(object):
             ibug_sem_03[fpp_sem == lb2num[lb]] = lb2num[lb]
             ibug_sem_04[fpp_sem == lb2num[lb]] = lb2num[lb]
         # sem = vote_sem([fpp_sem, ibug_sem_01, ibug_sem_02, ibug_sem_03, ibug_sem_04])
-        sem = vote_sem([fpp_sem, ibug_sem_03, ibug_sem_04])
+        sem = vote_sem([fpp_sem, ibug_sem_03, ibug_sem_04]).astype(np.uint8)
         if show:
             if is_bgr:
                 ori_img = cv2.cvtColor(ori_img, cv2.COLOR_BGR2RGB)
             show_result(ori_img, sem, self.label)
-
+        return sem
 
 if __name__ == '__main__':
     fp = HeadParser()
@@ -181,7 +181,7 @@ if __name__ == '__main__':
     img_names = os.listdir(img_dir)
     for img_name in img_names:
         img = cv2.imread(os.path.join(img_dir, img_name))
-        fp.run(img, True, True)
+        res = fp(img, True, True)
 
     # img = cv2.imread('assets/outputs/mh_dataset/images/0_00.jpg')
     # fp.run_fpp(fp.fpp_transform, fp.fpp_model, img, True, True)
@@ -189,4 +189,4 @@ if __name__ == '__main__':
     # fp.run_ibug(fp.ibug_model_02, img, True, True)
     # fp.run_ibug(fp.ibug_model_03, img, True, True)
     # fp.run_ibug(fp.ibug_model_04, img, True, True)
-    # fp.run(img, True, True)
+    # fp.__call__(img, True, True)

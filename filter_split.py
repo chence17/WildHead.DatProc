@@ -19,8 +19,6 @@ def parse_args():
 is_small = lambda w, h, min_size=512: w < min_size or h < min_size
 
 def filter_invalid_and_small(img_path):
-    # img = cv2.imread(img_path)
-    # if img is None: return # filter invalid images
     try:
         img_w, img_h = imagesize.get(img_path)
         if is_small(img_h, img_w): return # filter small images
