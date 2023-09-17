@@ -119,8 +119,7 @@ def crop_final(
 ):  
 
     orig_size = min(np.linalg.norm(quad[1] - quad[0]), np.linalg.norm(quad[2] - quad[1]))
-    if min_size is not None and orig_size < min_size:
-        return None
+    if min_size is not None and orig_size < min_size: raise ProcessError
 
     crop_w = int(size * (1 + left_expand + right_expand))
     crop_h = int(size * (1 + top_expand + bottom_expand))
