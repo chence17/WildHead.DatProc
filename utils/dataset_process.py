@@ -181,7 +181,11 @@ class FaceAlignmentDetector():
             max_score = np.max(scores)
             max_score_idx = np.argmax(scores)
             if max_score < self.score_thres: raise ProcessError("Score too low")
-        return landmarks[0][max_score_idx][:, :2] + image_upper_right if image_upper_right is not None else landmarks[0][max_score_idx][:, :2]
+            ret_landmarks = landmarks[0][max_score_idx][:, :2] * (1/scale)
+        if image_upper_right is not None:
+            return ret_landmarks + image_upper_right 
+        else:
+            return ret_landmarks
 
 class DlibDetector():
     def __init__(self, weight_file="/home/shitianhao/project/DatProc/3DDFA_V2/weights/shape_predictor_68_face_landmarks.dat", score_thres=0.85) -> None:
