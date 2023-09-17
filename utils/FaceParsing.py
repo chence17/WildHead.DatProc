@@ -148,7 +148,7 @@ class HeadParser(object):
             show_result(ori_img, ori_sem, self.label)
         return ori_sem
 
-    def run(self, ori_img, is_bgr, show: bool = False) -> np.ndarray:
+    def __call__(self, ori_img, is_bgr, show: bool = False) -> np.ndarray:
         fpp_sem = self.run_fpp(self.fpp_transform, self.fpp_model, ori_img, is_bgr, False)
         # ibug_sem_01 = self.run_ibug(self.ibug_model_01, ori_img, is_bgr, False)
         # ibug_sem_02 = self.run_ibug(self.ibug_model_02, ori_img, is_bgr, False)
@@ -181,7 +181,7 @@ if __name__ == '__main__':
     img_names = os.listdir(img_dir)
     for img_name in img_names:
         img = cv2.imread(os.path.join(img_dir, img_name))
-        fp.run(img, True, True)
+        fp(img, True, True)
 
     # img = cv2.imread('assets/outputs/mh_dataset/images/0_00.jpg')
     # fp.run_fpp(fp.fpp_transform, fp.fpp_model, img, True, True)
@@ -189,4 +189,4 @@ if __name__ == '__main__':
     # fp.run_ibug(fp.ibug_model_02, img, True, True)
     # fp.run_ibug(fp.ibug_model_03, img, True, True)
     # fp.run_ibug(fp.ibug_model_04, img, True, True)
-    # fp.run(img, True, True)
+    # fp.__call__(img, True, True)
