@@ -10,29 +10,12 @@ import numba as nb
 import face_alignment
 from tqdm import tqdm
 
-def parse_args():
-    parser = argparse.ArgumentParser(description='Dataset Statistic')
-    parser.add_argument('--data_path', type=str, help='path to dataset', default='/home/shitianhao/project/DatProc/assets/mh_dataset')
-    parser.add_argument('--output_dir', type=str, help='path to output dir', default='/home/shitianhao/project/DatProc/utils/stats')
-    args, _ = parser.parse_known_args()
-    return args
-
-def get_all_extensions(data_path):
-    extensions = set()
-    for root, dirs, files in os.walk(data_path):
-        for file in files:
-            ext = os.path.splitext(file)[-1]
-            extensions.add(ext)
-    return extensions
-
-def get_images(data_path, target_file_exts=['.jpg', '.png']):
+def get_images(data_path):
     img_paths = []
-    for root, dirs, files in os.walk(data_path):
-        for file in files:
-            ext = os.path.splitext(file)[-1]
-            if ext in target_file_exts:
-                photo_path = os.path.join(root, file)
-                img_paths.append(photo_path)
+    IMG_FORMATS = [".jpg", ".jpeg", ".png", ".bmp", ".tiff"]
+    for file in os.listdir(data_path):
+        ext = os.path.splitext(file)[-1]
+        if ext in IMG_FORMATS: img_paths.append(os.path.join(data_path, file))
     return img_paths
 
 @nb.njit('int64[:](float32[:,:], float32[:], float32, bool_)', fastmath=True, cache=True)
@@ -220,17 +203,37 @@ class ProcessError(Exception):
         self.message = message
         super().__init__(self.message)
     
+def segment(image_data: np.ndarray) -> np.ndarray:
+    # The image_data here is a cropped region from original image.
+    # The output of this function is the semantic segmentation mask of the image
+    pass
+
+def calc_h2b_ratio(mask_data: np.ndarray) -> float:
+    h, w = mask_data.shape
+    assert h == w, "image not suqare"
+    mask_data = cv2.threshold(mask_data, 127, 255, cv2.THRESH_BINARY)[1]
+    output = cv2.connectedComponentsWithStats(mask_data, connectivity=4)[1]
+    unique, counts = np.unique(output, return_counts=True)
+    unique, counts = unique[1:], counts[1:] # discard background
+    max_idx = np.argmax(counts)
+    result = np.where(output == unique[max_idx], 255, 0).astype(np.uint8)
+    head_top = np.argmax(np.any(result, axis=1))
+    ratio = max(h/(h-head_top), 1)
+    return ratio
+
 if __name__ == '__main__':
-    hdet = YoloHeadDetector(weights_file='assets/224x224_yolov4_hddet_480x640.onnx',
-                            input_width=640, input_height=480)
-    d_det= DlibDetector()
-    img = cv2.imread("/home/shitianhao/project/DatProc/assets/mh_dataset/5.png")
-    boxes = hdet(img, isBGR=True)
-    print(boxes)
-    for box in boxes:
-        x1, y1, w, h = box
-        x2, y2 = x1 + w, y1 + h
-        cv2.rectangle(img, (x1, y1), (x2, y2), (0, 0, 255))
-        # detect face
-        dets = d_det(img[y1:y2, x1:x2], isBGR=True, image_upper_right=np.array([x1, y1]))
+    test_mask = cv2.imread("/home/shitianhao/project/DatProc/assets/mask.jpg", cv2.IMREAD_GRAYSCALE)
+    calc_h2b_ratio(test_mask)
+    # hdet = YoloHeadDetector(weights_file='assets/224x224_yolov4_hddet_480x640.onnx',
+    #                         input_width=640, input_height=480)
+    # d_det= DlibDetector()
+    # img = cv2.imread("/home/shitianhao/project/DatProc/assets/mh_dataset/5.png")
+    # boxes = hdet(img, isBGR=True)
+    # print(boxes)
+    # for box in boxes:
+    #     x1, y1, w, h = box
+    #     x2, y2 = x1 + w, y1 + h
+    #     cv2.rectangle(img, (x1, y1), (x2, y2), (0, 0, 255))
+    #     # detect face
+    #     dets = d_det(img[y1:y2, x1:x2], isBGR=True, image_upper_right=np.array([x1, y1]))
         

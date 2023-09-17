@@ -2,6 +2,7 @@ import os
 import cv2
 import json
 import argparse
+import imagesize
 from tqdm import tqdm
 from multiprocessing import Pool
 
@@ -10,18 +11,21 @@ from utils.dataset_process import get_images, YoloHeadDetector
 def parse_args():
     parser = argparse.ArgumentParser(description='Dataset Statistic')
     parser.add_argument('image_path', type=str, help='path to the folder that holds images')
-    parser.add_argument('-j', '--num_processes', type=int, help='number of processes', default=32)
-    parser.add_argument('-p', '--partition_size', type=int, help='number of images in a partition of datset', default=10000)
+    parser.add_argument('-j', '--num_processes', type=int, help='number of processes (default 64)', default=64)
+    parser.add_argument('-p', '--partition_size', type=int, help='number of images in a partition of datset (default 10000)', default=10000)
     args, _ = parser.parse_known_args()
     return args
 
 is_small = lambda w, h, min_size=512: w < min_size or h < min_size
 
 def filter_invalid_and_small(img_path):
-    img = cv2.imread(img_path)
-    if img is None: return # filter invalid images
-    img_h, img_w = img.shape[:2]
-    if is_small(img_h, img_w): return # filter small images
+    # img = cv2.imread(img_path)
+    # if img is None: return # filter invalid images
+    try:
+        img_w, img_h = imagesize.get(img_path)
+        if is_small(img_h, img_w): return # filter small images
+    except:
+        return # invalid images
     return img_path
 
 def detect_head(img_path, hdet):
@@ -54,12 +58,13 @@ def main(args):
     output_dir = os.path.dirname(image_path)
 
     # search through dataset dir and get all image formats
+    print("searching for images")
     img_paths = get_images(image_path)
     meta_dict = {}
 
     print("filtering invalid and small images")
     with Pool(processes=args.num_processes) as pool:
-        valid_img_paths = pool.map(filter_invalid_and_small, img_paths)
+        valid_img_paths = list(tqdm(pool.imap(filter_invalid_and_small, img_paths), total=len(img_paths)))
     valid_img_paths = [path for path in valid_img_paths if path is not None]
 
     print("detecting head boxes")
