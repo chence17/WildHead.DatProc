@@ -29,7 +29,6 @@ class TDDFA(object):
 
     def __init__(self, **kvs):
         torch.set_grad_enabled(False)
-        print(__file__)
         # load BFM
         self.bfm = BFMModel(
             bfm_fp=kvs.get('bfm_fp', make_abs_path('configs/bfm_noneck_v3.pkl')),

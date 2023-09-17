@@ -23,6 +23,9 @@ from TDDFA_V2.utils.serialization import ser_to_ply, ser_to_obj
 from TDDFA_V2.utils.functions import draw_landmarks, get_suffix
 from TDDFA_V2.utils.tddfa_util import str2bool
 
+from utils.dataset_process import ProcessError
+
+
 def eg3dcamparams(R_in):
     camera_dist = 2.7
     intrinsics = np.array([[4.2647, 0, 0.5], [0, 4.2647, 0.5], [0, 0, 1]])
@@ -164,7 +167,6 @@ def find_center_bbox(roi_box_lst, w, h):
     dist = np.stack([dx,dy],1)
     return np.argmin(np.linalg.norm(dist, axis=1))
 
-
 class Recropper:
     def __init__(self, config_file='/home/shitianhao/project/DatProc/TDDFA_V2/configs/mb1_120x120.yml', use_onnx=False, mode='gpu'):
         self.cfg = yaml.load(open(config_file), Loader=yaml.SafeLoader)
@@ -193,9 +195,8 @@ class Recropper:
                 # Detect faces, get 3DMM params and roi boxes
                 boxes = self.face_boxes(img)
                 if len(boxes) == 0:
-                    print(f'No face detected')
-                    break
-
+                    raise ProcessError(f'No face detected')
+                    
                 param_lst, roi_box_lst = self.tddfa(img, boxes)
                 box_idx = find_center_bbox(roi_box_lst, w, h)
 
@@ -231,12 +232,9 @@ class Recropper:
                 s = (scale_x + scale_y) / 2 * s_relative
                 # print(f"[{iteration}] s={s} t3d={t3d}")
 
-                if s < 0.7 or s > 1.3:
-                    break
-                if abs(pose[0]) > 90 or abs(pose[1]) > 80 or abs(pose[2]) > 50:
-                    break
-                if abs(t3d[0]) > 1. or abs(t3d[1]) > 1.:
-                    break
+                if s < 0.7 or s > 1.3: raise ProcessError()
+                if abs(pose[0]) > 90 or abs(pose[1]) > 80 or abs(pose[2]) > 50: raise ProcessError()
+                if abs(t3d[0]) > 1. or abs(t3d[1]) > 1.: raise ProcessError()
 
                 quad_c = quad_c + quad_x * t3d[0]
                 quad_c = quad_c - quad_y * t3d[1]
@@ -245,17 +243,17 @@ class Recropper:
                 c, x, y = quad_c, quad_x, quad_y
                 quad = np.stack([c - x - y, c - x + y, c + x + y, c + x - y]).astype(np.float32)
 
-            # final projection matrix
-            s = 1
-            t3d = 0 * t3d
-            R[:,:3] = R[:,:3] * s
-            P = np.concatenate([R,t3d[:,None]],1)
-            P = np.concatenate([P, np.array([[0,0,0,1.]])],0)
-            camera_poses = eg3dcamparams(P.flatten())
+                # final projection matrix
+                s = 1
+                t3d = 0 * t3d
+                R[:,:3] = R[:,:3] * s
+                P = np.concatenate([R,t3d[:,None]],1)
+                P = np.concatenate([P, np.array([[0,0,0,1.]])],0)
+                camera_poses = eg3dcamparams(P.flatten())
 
-            # Save cropped images
-            cropped_img = crop_final(image_data, size=self.size, quad=quad)
-            return cropped_img, camera_poses, quad
+                # Save cropped images
+                cropped_img = crop_final(image_data, size=self.size, quad=quad)
+                return cropped_img, camera_poses, quad
 
 
 def main(args):

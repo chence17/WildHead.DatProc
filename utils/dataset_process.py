@@ -161,7 +161,7 @@ class YoloHeadDetector(object):
         return filtered_boxes[:max_box_num, :4].astype(np.int32)
 
 class FaceAlignmentDetector():
-    def __init__(self, score_thres=0.8) -> None:
+    def __init__(self, score_thres=0.75) -> None:
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.detector = face_alignment.FaceAlignment(face_alignment.LandmarksType.THREE_D, flip_input=False, device=device, face_detector='sfd')
         self.score_thres = score_thres
@@ -170,6 +170,9 @@ class FaceAlignmentDetector():
         # The image_data here is a cropped region from original image.
         # The output of this function is the absolute coorinate of landmarks in the image
         if isBGR: image_data = cv2.cvtColor(image_data, cv2.COLOR_BGR2RGB)
+        max_dim = np.argmax(image_data.shape[:2])
+        scale = 512 / image_data.shape[max_dim]
+        image_data = cv2.resize(image_data, (int(image_data.shape[1] * scale), int(image_data.shape[0] * scale)))
         landmarks = self.detector.get_landmarks_from_image(image_data, return_landmark_score=True)
         if landmarks[0] is None: raise ProcessError("No face detected")
         else:
@@ -202,28 +205,24 @@ class ProcessError(Exception):
     def __init__(self, message="Process Error"):
         self.message = message
         super().__init__(self.message)
-    
-def segment(image_data: np.ndarray) -> np.ndarray:
-    # The image_data here is a cropped region from original image.
-    # The output of this function is the semantic segmentation mask of the image
-    pass
 
 def calc_h2b_ratio(mask_data: np.ndarray) -> float:
     h, w = mask_data.shape
     assert h == w, "image not suqare"
-    mask_data = cv2.threshold(mask_data, 127, 255, cv2.THRESH_BINARY)[1]
     output = cv2.connectedComponentsWithStats(mask_data, connectivity=4)[1]
     unique, counts = np.unique(output, return_counts=True)
     unique, counts = unique[1:], counts[1:] # discard background
     max_idx = np.argmax(counts)
     result = np.where(output == unique[max_idx], 255, 0).astype(np.uint8)
     head_top = np.argmax(np.any(result, axis=1))
-    ratio = max(h/(h-head_top), 1)
+    half_h = h/2
+    ratio = max(half_h/(half_h-head_top), 1)
     return ratio
 
 if __name__ == '__main__':
     test_mask = cv2.imread("/home/shitianhao/project/DatProc/assets/mask.jpg", cv2.IMREAD_GRAYSCALE)
-    calc_h2b_ratio(test_mask)
+    _, nm = calc_h2b_ratio(test_mask)
+    cv2.imwrite("/home/shitianhao/project/DatProc/assets/nm.jpg", nm)
     # hdet = YoloHeadDetector(weights_file='assets/224x224_yolov4_hddet_480x640.onnx',
     #                         input_width=640, input_height=480)
     # d_det= DlibDetector()

@@ -5,8 +5,9 @@ import argparse
 import numpy as np
 from tqdm import tqdm
 
-from utils.dataset_process import FaceAlignmentDetector, ProcessError, segment, calc_h2b_ratio
 from recrop_images import Recropper
+from utils.FaceParsing import HeadParser
+from utils.dataset_process import FaceAlignmentDetector, ProcessError, calc_h2b_ratio
 
 
 def parse_args():
@@ -17,8 +18,7 @@ def parse_args():
     args, _ = parser.parse_known_args()
     return args
 
-
-def process_image(img_path, meta, fdet, recropper, save_img_dir, save_sem_dir):
+def process_image(img_path, meta, fdet, recropper, hpar, save_img_dir, save_sem_dir):
     img = cv2.imread(img_path)
     for box_id, box_meta in tqdm(meta.items(), position=1, leave=False):
         box_x, box_y, box_w, box_h = box_meta['head_box']
@@ -33,6 +33,7 @@ def process_image(img_path, meta, fdet, recropper, save_img_dir, save_sem_dir):
             box_meta['landmarks'] = landmarks.tolist()
             box_meta['frontal'] = True
         try:
+            if box_meta['frontal'] == False: raise ProcessError
             cropped_img, camera_poses, quad = recropper(box_image, landmarks)
         except ProcessError:
             box_meta['frontal'] = False
@@ -43,21 +44,22 @@ def process_image(img_path, meta, fdet, recropper, save_img_dir, save_sem_dir):
             save_img_path = os.path.join(
                 save_img_dir, f'{img_name[:-4]}_{box_id}{img_name[-4:]}')
             cv2.imwrite(save_img_path, cropped_img)
-            mask = segment(cropped_img)
+            sem = hpar(cropped_img, is_bgr=True)
+            mask = (sem != 0).astype(np.uint8)
             save_sem_path = os.path.join(
                 save_sem_dir, f'{img_name[:-4]}_{box_id}{img_name[-4:]}')
-            cv2.imwrite(save_sem_path, mask)
+            cv2.imwrite(save_sem_path, sem)
             box_meta['camera_poses'] = camera_poses.tolist()
             box_meta['quad'] = quad.tolist()
             box_meta['h2b_ratio'] = calc_h2b_ratio(mask)
         meta[box_id] = box_meta
-    return meta
 
 
 def main(args):
     # initialize face detecor and recropper
     fdet = FaceAlignmentDetector()
     recropper = Recropper()
+    hpar = HeadParser()
     # load metadata file
     with open(args.file, 'r') as f:
         data = json.load(f)
@@ -66,10 +68,13 @@ def main(args):
     cropped_img_dir = os.path.join(json_dir, 'cropped_images')
     cropped_sem_dir = os.path.join(json_dir, 'cropped_semantic')
     os.makedirs(cropped_img_dir, exist_ok=True)
+    os.makedirs(cropped_sem_dir, exist_ok=True)
     for img_path, meta in tqdm(data.items(), position=0, leave=True):
-        img_path = os.path.join(json_dir, img_path)
-        _meta = process_image(img_path, meta, fdet, recropper, cropped_img_dir, cropped_sem_dir)
-        data[img_path] = _meta
+        abs_img_path = os.path.join(json_dir, img_path)
+        process_image(abs_img_path, meta, fdet, recropper, hpar, cropped_img_dir, cropped_sem_dir)
+    # save metadata file
+    with open(args.file, 'w') as f:
+        json.dump(data, f, indent=4)
 
 
 
