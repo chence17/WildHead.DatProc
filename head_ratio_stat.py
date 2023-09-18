@@ -19,7 +19,7 @@ def main(args):
     for json_file_path in tqdm(json_file_paths, position=0, leave=True):
         with open(json_file_path, 'r') as f:
             meta = json.load(f)
-        for img_rel_path, img_meta in tqdm(meta.items(), position=1, leave=False):
+        for img_rel_path, img_meta in meta.items():
             for box_id, box_meta in (img_meta.items()):
                 if box_meta['frontal'] is False: continue
                 h2b_ratios.append(box_meta['h2b_ratio'])

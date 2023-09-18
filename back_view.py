@@ -1,17 +1,26 @@
-import json
-import os.path as osp
 import cv2
-import numpy as np
-import torch
-import onnxruntime
+import json
 import math
+import torch
+import argparse
+import onnxruntime
+import numpy as np
+import os.path as osp
 from scipy.spatial.transform import Rotation
 
 
-from face_parsing import show_image, HeadParser
+from utils.face_parsing import show_image, HeadParser
 from recrop_images import crop_final, eg3dcamparams
 from face3d import mesh
 from face3d.mesh_io.mesh import load_obj_mesh
+from utils.dataset_process import find_meta_files
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Run Frontal View Pipeline')
+    parser.add_argument('json_dir', type=str, help='path to json file directory',
+                        default='/home/shitianhao/project/DatProc/utils/stats/')
+    args, _ = parser.parse_known_args()
+    return args
 
 
 def render_image(R, vertices, triangles, colors):
@@ -22,7 +31,8 @@ def render_image(R, vertices, triangles, colors):
     h = w = 256
     bg_img = np.ones([h, w, 3], dtype=np.float32) * 0.5
     image_vertices = mesh.transform.to_image(vertices_, h, w)
-    rendering_cc = mesh.render.render_colors(image_vertices, triangles, colors, h, w, BG=bg_img)
+    rendering_cc = mesh.render.render_colors(
+        image_vertices, triangles, colors, h, w, BG=bg_img)
     rendering_cc_u8 = (rendering_cc * 255).astype(np.uint8)
     return rendering_cc_u8
 
@@ -50,25 +60,30 @@ def rotate_point(point, center, angle):
     angle_rad = math.radians(angle)
 
     # 计算旋转后的新坐标
-    new_x = (x - cx) * math.cos(angle_rad) - (y - cy) * math.sin(angle_rad) + cx
-    new_y = (x - cx) * math.sin(angle_rad) + (y - cy) * math.cos(angle_rad) + cy
+    new_x = (x - cx) * math.cos(angle_rad) - \
+        (y - cy) * math.sin(angle_rad) + cx
+    new_y = (x - cx) * math.sin(angle_rad) + \
+        (y - cy) * math.cos(angle_rad) + cy
 
     return new_x, new_y
 
 
 class WHENetHeadPoseEstimator(object):
-    def __init__(self, weights_file: str, input_width: int=224, input_height: int=224) -> None:
+    def __init__(self, weights_file: str, input_width: int = 224, input_height: int = 224) -> None:
         self.weights_file = weights_file
         self.providers = ['CPUExecutionProvider']
         if torch.cuda.is_available():
             self.providers.insert(0, 'CUDAExecutionProvider')
-        self.estimator = onnxruntime.InferenceSession(self.weights_file, providers=self.providers)
+        self.estimator = onnxruntime.InferenceSession(
+            self.weights_file, providers=self.providers)
         self.input_width = input_width
         self.input_height = input_height
         self.input_hw = (self.input_height, self.input_width)
         self.input_name = self.estimator.get_inputs()[0].name
-        self.output_names = [output.name for output in self.estimator.get_outputs()]
-        self.output_shapes = [output.shape for output in self.estimator.get_outputs()]
+        self.output_names = [
+            output.name for output in self.estimator.get_outputs()]
+        self.output_shapes = [
+            output.shape for output in self.estimator.get_outputs()]
 
     def __call__(self, image_data: np.ndarray, isBGR: bool) -> np.ndarray:
         if isBGR:
@@ -94,7 +109,8 @@ def show_hbox(img_data, hbox, is_bgr, title, show_axis=True):
 def calculate_R(hpose):
     yaw, roll, pitch = hpose
     r_pitch, r_yaw, r_roll = -pitch, -yaw, -roll
-    R = Rotation.from_euler('zyx', [r_roll, r_yaw, r_pitch], degrees=True).as_matrix()
+    R = Rotation.from_euler(
+        'zyx', [r_roll, r_yaw, r_pitch], degrees=True).as_matrix()
     return R
 
 
@@ -129,16 +145,20 @@ def rotate_image(image, center, angle, top_expand=0.1, left_expand=0.05,
     mat = cv2.getAffineTransform(quad[:3], bound[:3])
 
     # Apply rotation to the image
-    rotated_image = cv2.warpAffine(image, mat, crop_size, flags=cv2.INTER_LANCZOS4, borderMode=border_mode)
+    rotated_image = cv2.warpAffine(
+        image, mat, crop_size, flags=cv2.INTER_LANCZOS4, borderMode=border_mode)
     empty = np.ones_like(image) * 255
     crop_mask = cv2.warpAffine(empty, mat, crop_size)
     mask_kernel = int(size * 0.02) * 2 + 1
-    blur_kernel = int(size * 0.03) * 2 + 1 if blur_kernel is None else blur_kernel
+    blur_kernel = int(size * 0.03) * 2 + \
+        1 if blur_kernel is None else blur_kernel
     if crop_mask.mean() < 255:
-        blur_mask = cv2.blur(crop_mask.astype(np.float32).mean(2), (mask_kernel, mask_kernel)) / 255.0
+        blur_mask = cv2.blur(crop_mask.astype(np.float32).mean(
+            2), (mask_kernel, mask_kernel)) / 255.0
         blur_mask = blur_mask[..., np.newaxis]  # .astype(np.float32) / 255.0
         blurred_img = cv2.blur(rotated_image, (blur_kernel, blur_kernel), 0)
-        rotated_image = rotated_image * blur_mask + blurred_img * (1 - blur_mask)
+        rotated_image = rotated_image * \
+            blur_mask + blurred_img * (1 - blur_mask)
         rotated_image = rotated_image.astype(np.uint8)
     return rotated_image
 
@@ -164,7 +184,8 @@ def rotate_quad(hbox_quad, angle, center):
 def get_rotate_angle(hbox, img_data, is_bgr, pe, iterations=3):
     x1, y1, w, h = hbox
     x2, y2 = x1 + w, y1 + h
-    hbox_quad = np.array([[x1, y1], [x1, y2], [x2, y2], [x2, y1]]).astype(np.float32)
+    hbox_quad = np.array([[x1, y1], [x1, y2], [x2, y2],
+                         [x2, y1]]).astype(np.float32)
     hbox_center = np.mean(hbox_quad, axis=0)
     angle = 0
     for _ in range(iterations):
@@ -198,7 +219,8 @@ def get_scaled_hbox(ratio, msk_hbox, hbox):
 def hbox2quad(hbox):
     x1, y1, w, h = hbox
     x2, y2 = x1 + w, y1 + h
-    quad = np.array([[x1, y1], [x1, y2], [x2, y2], [x2, y1]]).astype(np.float32)
+    quad = np.array([[x1, y1], [x1, y2], [x2, y2], [x2, y1]]
+                    ).astype(np.float32)
     return quad
 
 
@@ -214,44 +236,57 @@ assert pe.input_height == pe.input_width
 ratio = 1.05
 crop_size = 563
 
-with open(json_path, 'r') as f:
-    meta = json.load(f)
 
-for img_name in meta.keys():
-    if img_name not in ['images/000031.png', 'images/000679.png', 'images/000320.png']:
-        continue
-    img_path = osp.join(data_root, img_name)
-    img_data = cv2.imread(img_path)
-    for k, v in meta[img_name].items():
-        hbox = v['head_box']
+def main(args):
 
-        show_hbox(img_data.copy(), hbox, True, f'hbox {img_name} {k}', True)
+    with open(json_path, 'r') as f:
+        meta = json.load(f)
 
-        # cx, cy = x1 + w / 2, y1 + h / 2
-        angle, _ = get_rotate_angle(hbox, img_data.copy(), True, pe, iterations=3)
-        img_hbox, _ = get_hbox_image(hbox, img_data.copy())
-        # img_hbox_rot = rotate_image(img_hbox.copy(), hbox_img_center, angle)
-        show_image(img_hbox, True, f'img_hbox {img_name} {k}', show_axis=True)
-        # show_image(img_hbox_rot, True, f'img_hbox_rot {img_name} {k}', show_axis=True)
-        sem_hbox = fp(img_hbox, True, False)
-        msk_hbox = (sem_hbox != 0).astype(np.uint8) * 255
-        hbox = get_scaled_hbox(ratio, msk_hbox, hbox)
-        hbox_quad = hbox2quad(hbox)
-        hbox_center = np.mean(hbox_quad, axis=0)
-        hbox_quad = rotate_quad(hbox_quad.copy(), angle, hbox_center)
-        hbox_img = crop_final(img_data.copy(), size=crop_size, quad=hbox_quad,
-                              top_expand=0., left_expand=0., bottom_expand=0., right_expand=0.)
-        show_image(hbox_img, True, f'hbox_img {img_name} {k}', show_axis=True)
-        print(hbox_img.shape)
-        hbox_img_sem = fp(hbox_img, True, False)
-        hbox_img_hpose = pe(cv2.resize(hbox_img, pe.input_hw), isBGR=True)
-        R = calculate_R(hbox_img_hpose)
-        R_img = render_image(R, vertices.copy(), triangles.copy(), colors.copy())
-        show_image(R_img, False, f'R_raw_img {img_name} {k}', show_axis=True)
-        s = 1
-        t3d = np.array([0., 0., 0.])
-        R[:, :3] = R[:, :3] * s
-        P = np.concatenate([R, t3d[:, None]], 1)
-        P = np.concatenate([P, np.array([[0, 0, 0, 1.]])], 0)
-        cam = eg3dcamparams(P.flatten())
-        print(cam)
+    for img_name in meta.keys():
+        if img_name not in ['images/000031.png', 'images/000679.png', 'images/000320.png']:
+            continue
+        img_path = osp.join(data_root, img_name)
+        img_data = cv2.imread(img_path)
+        for k, v in meta[img_name].items():
+            hbox = v['head_box']
+
+            show_hbox(img_data.copy(), hbox, True,
+                      f'hbox {img_name} {k}', True)
+
+            # cx, cy = x1 + w / 2, y1 + h / 2
+            angle, _ = get_rotate_angle(
+                hbox, img_data.copy(), True, pe, iterations=3)
+            img_hbox, _ = get_hbox_image(hbox, img_data.copy())
+            # img_hbox_rot = rotate_image(img_hbox.copy(), hbox_img_center, angle)
+            show_image(img_hbox, True,
+                       f'img_hbox {img_name} {k}', show_axis=True)
+            # show_image(img_hbox_rot, True, f'img_hbox_rot {img_name} {k}', show_axis=True)
+            sem_hbox = fp(img_hbox, True, False)
+            msk_hbox = (sem_hbox != 0).astype(np.uint8) * 255
+            hbox = get_scaled_hbox(ratio, msk_hbox, hbox)
+            hbox_quad = hbox2quad(hbox)
+            hbox_center = np.mean(hbox_quad, axis=0)
+            # save
+            hbox_quad = rotate_quad(hbox_quad.copy(), angle, hbox_center)
+            # save
+            hbox_img = crop_final(img_data.copy(), size=crop_size, quad=hbox_quad,
+                                  top_expand=0., left_expand=0., bottom_expand=0., right_expand=0.)
+            show_image(hbox_img, True,
+                       f'hbox_img {img_name} {k}', show_axis=True)
+            print(hbox_img.shape)
+            # save
+            hbox_img_sem = fp(hbox_img, True, False)
+            hbox_img_hpose = pe(cv2.resize(hbox_img, pe.input_hw), isBGR=True)
+            R = calculate_R(hbox_img_hpose)
+            R_img = render_image(R, vertices.copy(),
+                                 triangles.copy(), colors.copy())
+            show_image(
+                R_img, False, f'R_raw_img {img_name} {k}', show_axis=True)
+            s = 1
+            t3d = np.array([0., 0., 0.])
+            R[:, :3] = R[:, :3] * s
+            P = np.concatenate([R, t3d[:, None]], 1)
+            P = np.concatenate([P, np.array([[0, 0, 0, 1.]])], 0)
+            # save
+            cam = eg3dcamparams(P.flatten())
+            print(cam)
