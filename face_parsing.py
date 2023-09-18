@@ -3,8 +3,8 @@ Author: chence antonio.chan.cc@outlook.com
 Date: 2023-09-17 09:42:41
 LastEditors: chence antonio.chan.cc@outlook.com
 LastEditTime: 2023-09-17 10:07:45
-FilePath: /DatProc/FaceParsing.py
-Description: FaceParsing.py
+FilePath: /DatProc/face_parsing.py
+Description: face_parsing.py
 '''
 import os
 
@@ -20,7 +20,9 @@ from bisenet.bisenet import load_BiSeNet_model
 from ibug.face_parsing import FaceParser
 
 
-def show_image(img, title, show_axis=False):
+def show_image(img, is_bgr, title, show_axis=False):
+    if is_bgr:
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     plt.figure()
     plt.title(title)
     plt.imshow(img)
