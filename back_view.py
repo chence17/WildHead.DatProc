@@ -8,7 +8,7 @@ import math
 from scipy.spatial.transform import Rotation
 
 
-from face_parsing import show_image, HeadParser
+from utils.face_parsing import show_image, HeadParser
 from recrop_images import crop_final, eg3dcamparams
 from face3d import mesh
 from face3d.mesh_io.mesh import load_obj_mesh
@@ -202,56 +202,57 @@ def hbox2quad(hbox):
     return quad
 
 
-data_root = 'samples'
-json_path = 'samples/meta_1-1.json'
-vertices, triangles, colors = load_obj_mesh('assets/yaoming.obj')
+if __name__ == "__main__":
+    data_root = 'samples'
+    json_path = 'samples/meta_1-1.json'
+    vertices, triangles, colors = load_obj_mesh('assets/yaoming.obj')
 
-fp = HeadParser()
+    fp = HeadParser()
 
-pe = WHENetHeadPoseEstimator('assets/whenet_1x3x224x224_prepost.onnx')
-assert pe.input_height == pe.input_width
+    pe = WHENetHeadPoseEstimator('assets/whenet_1x3x224x224_prepost.onnx')
+    assert pe.input_height == pe.input_width
 
-ratio = 1.05
-crop_size = 563
+    ratio = 1.05
+    crop_size = 563
 
-with open(json_path, 'r') as f:
-    meta = json.load(f)
+    with open(json_path, 'r') as f:
+        meta = json.load(f)
 
-for img_name in meta.keys():
-    if img_name not in ['images/000031.png', 'images/000679.png', 'images/000320.png']:
-        continue
-    img_path = osp.join(data_root, img_name)
-    img_data = cv2.imread(img_path)
-    for k, v in meta[img_name].items():
-        hbox = v['head_box']
+    for img_name in meta.keys():
+        if img_name not in ['images/000031.png', 'images/000679.png', 'images/000320.png']:
+            continue
+        img_path = osp.join(data_root, img_name)
+        img_data = cv2.imread(img_path)
+        for k, v in meta[img_name].items():
+            hbox = v['head_box']
 
-        show_hbox(img_data.copy(), hbox, True, f'hbox {img_name} {k}', True)
+            show_hbox(img_data.copy(), hbox, True, f'hbox {img_name} {k}', True)
 
-        # cx, cy = x1 + w / 2, y1 + h / 2
-        angle, _ = get_rotate_angle(hbox, img_data.copy(), True, pe, iterations=3)
-        img_hbox, _ = get_hbox_image(hbox, img_data.copy())
-        # img_hbox_rot = rotate_image(img_hbox.copy(), hbox_img_center, angle)
-        show_image(img_hbox, True, f'img_hbox {img_name} {k}', show_axis=True)
-        # show_image(img_hbox_rot, True, f'img_hbox_rot {img_name} {k}', show_axis=True)
-        sem_hbox = fp(img_hbox, True, False)
-        msk_hbox = (sem_hbox != 0).astype(np.uint8) * 255
-        hbox = get_scaled_hbox(ratio, msk_hbox, hbox)
-        hbox_quad = hbox2quad(hbox)
-        hbox_center = np.mean(hbox_quad, axis=0)
-        hbox_quad = rotate_quad(hbox_quad.copy(), angle, hbox_center)
-        hbox_img = crop_final(img_data.copy(), size=crop_size, quad=hbox_quad,
-                              top_expand=0., left_expand=0., bottom_expand=0., right_expand=0.)
-        show_image(hbox_img, True, f'hbox_img {img_name} {k}', show_axis=True)
-        print(hbox_img.shape)
-        hbox_img_sem = fp(hbox_img, True, False)
-        hbox_img_hpose = pe(cv2.resize(hbox_img, pe.input_hw), isBGR=True)
-        R = calculate_R(hbox_img_hpose)
-        R_img = render_image(R, vertices.copy(), triangles.copy(), colors.copy())
-        show_image(R_img, False, f'R_raw_img {img_name} {k}', show_axis=True)
-        s = 1
-        t3d = np.array([0., 0., 0.])
-        R[:, :3] = R[:, :3] * s
-        P = np.concatenate([R, t3d[:, None]], 1)
-        P = np.concatenate([P, np.array([[0, 0, 0, 1.]])], 0)
-        cam = eg3dcamparams(P.flatten())
-        print(cam)
+            # cx, cy = x1 + w / 2, y1 + h / 2
+            angle, _ = get_rotate_angle(hbox, img_data.copy(), True, pe, iterations=3)
+            img_hbox, _ = get_hbox_image(hbox, img_data.copy())
+            # img_hbox_rot = rotate_image(img_hbox.copy(), hbox_img_center, angle)
+            show_image(img_hbox, True, f'img_hbox {img_name} {k}', show_axis=True)
+            # show_image(img_hbox_rot, True, f'img_hbox_rot {img_name} {k}', show_axis=True)
+            sem_hbox = fp(img_hbox, True, False)
+            msk_hbox = (sem_hbox != 0).astype(np.uint8) * 255
+            hbox = get_scaled_hbox(ratio, msk_hbox, hbox)
+            hbox_quad = hbox2quad(hbox)
+            hbox_center = np.mean(hbox_quad, axis=0)
+            hbox_quad = rotate_quad(hbox_quad.copy(), angle, hbox_center)
+            hbox_img = crop_final(img_data.copy(), size=crop_size, quad=hbox_quad,
+                                  top_expand=0., left_expand=0., bottom_expand=0., right_expand=0.)
+            show_image(hbox_img, True, f'hbox_img {img_name} {k}', show_axis=True)
+            print(hbox_img.shape)
+            hbox_img_sem = fp(hbox_img, True, True)
+            hbox_img_hpose = pe(cv2.resize(hbox_img, pe.input_hw), isBGR=True)
+            R = calculate_R(hbox_img_hpose)
+            R_img = render_image(R, vertices.copy(), triangles.copy(), colors.copy())
+            show_image(R_img, False, f'R_raw_img {img_name} {k}', show_axis=True)
+            s = 1
+            t3d = np.array([0., 0., 0.])
+            R[:, :3] = R[:, :3] * s
+            P = np.concatenate([R, t3d[:, None]], 1)
+            P = np.concatenate([P, np.array([[0, 0, 0, 1.]])], 0)
+            cam = eg3dcamparams(P.flatten())
+            print(cam)

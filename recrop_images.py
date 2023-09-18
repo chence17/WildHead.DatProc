@@ -23,7 +23,7 @@ from TDDFA_V2.utils.serialization import ser_to_ply, ser_to_obj
 from TDDFA_V2.utils.functions import draw_landmarks, get_suffix
 from TDDFA_V2.utils.tddfa_util import str2bool
 
-from utils.dataset_process import ProcessError
+# from utils.dataset_process import ProcessError
 
 
 def eg3dcamparams(R_in):
@@ -119,7 +119,7 @@ def crop_final(
 ):  
 
     orig_size = min(np.linalg.norm(quad[1] - quad[0]), np.linalg.norm(quad[2] - quad[1]))
-    if min_size is not None and orig_size < min_size: raise ProcessError
+    if min_size is not None and orig_size < min_size: raise RuntimeError()
 
     crop_w = int(size * (1 + left_expand + right_expand))
     crop_h = int(size * (1 + top_expand + bottom_expand))
@@ -167,7 +167,7 @@ def find_center_bbox(roi_box_lst, w, h):
     return np.argmin(np.linalg.norm(dist, axis=1))
 
 class Recropper:
-    def __init__(self, config_file='/home/shitianhao/project/DatProc/TDDFA_V2/configs/mb1_120x120.yml', use_onnx=False, mode='gpu'):
+    def __init__(self, config_file='TDDFA_V2/configs/mb1_120x120.yml', use_onnx=False, mode='gpu'):
         self.cfg = yaml.load(open(config_file), Loader=yaml.SafeLoader)
         self.size = 512
         # Initialize FaceBoxes and TDDFA
@@ -194,8 +194,8 @@ class Recropper:
                 # Detect faces, get 3DMM params and roi boxes
                 boxes = self.face_boxes(img)
                 if len(boxes) == 0:
-                    raise ProcessError(f'No face detected')
-                    
+                    raise RuntimeError(f'No face detected')
+
                 param_lst, roi_box_lst = self.tddfa(img, boxes)
                 box_idx = find_center_bbox(roi_box_lst, w, h)
 
@@ -231,9 +231,9 @@ class Recropper:
                 s = (scale_x + scale_y) / 2 * s_relative
                 # print(f"[{iteration}] s={s} t3d={t3d}")
 
-                if s < 0.7 or s > 1.3: raise ProcessError()
-                if abs(pose[0]) > 90 or abs(pose[1]) > 80 or abs(pose[2]) > 50: raise ProcessError()
-                if abs(t3d[0]) > 1. or abs(t3d[1]) > 1.: raise ProcessError()
+                if s < 0.7 or s > 1.3: raise RuntimeError()
+                if abs(pose[0]) > 90 or abs(pose[1]) > 80 or abs(pose[2]) > 50: raise RuntimeError()
+                if abs(t3d[0]) > 1. or abs(t3d[1]) > 1.: raise RuntimeError()
 
                 quad_c = quad_c + quad_x * t3d[0]
                 quad_c = quad_c - quad_y * t3d[1]

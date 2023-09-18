@@ -179,7 +179,7 @@ class HeadParser(object):
 if __name__ == '__main__':
     fp = HeadParser()
     # img_dir = 'assets/outputs/mh_dataset/images'
-    img_dir = 'samples'
+    img_dir = '../samples'
     img_names = os.listdir(img_dir)
     for img_name in img_names:
         img = cv2.imread(os.path.join(img_dir, img_name))
