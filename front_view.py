@@ -7,7 +7,7 @@ import numpy as np
 from tqdm import tqdm
 
 from recrop_images import Recropper
-from utils.FaceParsing import HeadParser
+from utils.face_parsing import HeadParser
 from utils.dataset_process import FaceAlignmentDetector, ProcessError, calc_h2b_ratio, find_meta_files
 
 
@@ -61,16 +61,17 @@ def main(args):
     recropper = Recropper()
     hpar = HeadParser()
     # output dir
-    cropped_img_dir = os.path.join(args.json_dir, 'cropped_images')
-    cropped_sem_dir = os.path.join(args.json_dir, 'cropped_semantic')
+    json_dir = os.path.realpath(args.json_dir)
+    cropped_img_dir = os.path.join(json_dir, 'cropped_images')
+    cropped_sem_dir = os.path.join(json_dir, 'cropped_semantic')
     os.makedirs(cropped_img_dir, exist_ok=True)
     os.makedirs(cropped_sem_dir, exist_ok=True)
-    json_file_paths = find_meta_files(args.json_dir)
+    json_file_paths = find_meta_files(json_dir)
     for json_path in tqdm(json_file_paths, position=0, leave=True):
         with open(json_path, 'r') as f:
             data = json.load(f)
         for img_path, meta in tqdm(data.items(), position=1, leave=False):
-            abs_img_path = os.path.join(args.json_dir, img_path)
+            abs_img_path = os.path.join(json_dir, img_path)
             process_image(abs_img_path, meta, fdet, recropper, hpar, cropped_img_dir, cropped_sem_dir)
         # save metadata file
         with open(json_path, 'w') as f:

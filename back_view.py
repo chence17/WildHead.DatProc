@@ -8,7 +8,7 @@ import math
 from scipy.spatial.transform import Rotation
 
 
-from utils.face_parsing import show_image, HeadParser
+from face_parsing import show_image, HeadParser
 from recrop_images import crop_final, eg3dcamparams
 from face3d import mesh
 from face3d.mesh_io.mesh import load_obj_mesh
@@ -215,16 +215,16 @@ if __name__ == "__main__":
     ratio = 1.05
     crop_size = 563
 
-    with open(json_path, 'r') as f:
-        meta = json.load(f)
+with open(json_path, 'r') as f:
+    meta = json.load(f)
 
-    for img_name in meta.keys():
-        if img_name not in ['images/000031.png', 'images/000679.png', 'images/000320.png']:
-            continue
-        img_path = osp.join(data_root, img_name)
-        img_data = cv2.imread(img_path)
-        for k, v in meta[img_name].items():
-            hbox = v['head_box']
+for img_name in meta.keys():
+    if img_name not in ['images/000031.png', 'images/000679.png', 'images/000320.png']:
+        continue
+    img_path = osp.join(data_root, img_name)
+    img_data = cv2.imread(img_path)
+    for k, v in meta[img_name].items():
+        hbox = v['head_box']
 
             show_hbox(img_data.copy(), hbox, True, f'hbox {img_name} {k}', True)
 
