@@ -1,4 +1,5 @@
 import os
+import re
 import cv2
 import json
 import argparse
@@ -7,20 +8,19 @@ from tqdm import tqdm
 
 from recrop_images import Recropper
 from utils.FaceParsing import HeadParser
-from utils.dataset_process import FaceAlignmentDetector, ProcessError, calc_h2b_ratio
+from utils.dataset_process import FaceAlignmentDetector, ProcessError, calc_h2b_ratio, find_meta_files
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Frontal View Pipeline')
-    parser.add_argument('file', type=str, help='path to json file',
-                        default='/home/shitianhao/project/DatProc/utils/stats/mh_dataset_stat.json')
-    # parser.add_argument('-j', '--num_processes', type=int, help='number of processes', default=32)
+    parser.add_argument('json_dir', type=str, help='path to json file directory',
+                        default='/home/shitianhao/project/DatProc/utils/stats/')
     args, _ = parser.parse_known_args()
     return args
 
 def process_image(img_path, meta, fdet, recropper, hpar, save_img_dir, save_sem_dir):
     img = cv2.imread(img_path)
-    for box_id, box_meta in tqdm(meta.items(), position=1, leave=False):
+    for box_id, box_meta in tqdm(meta.items(), position=2, leave=False):
         box_x, box_y, box_w, box_h = box_meta['head_box']
         box_image = img[int(box_y):int(box_y+box_h),
                         int(box_x):int(box_x+box_w)].copy()
@@ -60,22 +60,21 @@ def main(args):
     fdet = FaceAlignmentDetector()
     recropper = Recropper()
     hpar = HeadParser()
-    # load metadata file
-    with open(args.file, 'r') as f:
-        data = json.load(f)
     # output dir
-    json_dir = os.path.dirname(args.file)
-    cropped_img_dir = os.path.join(json_dir, 'cropped_images')
-    cropped_sem_dir = os.path.join(json_dir, 'cropped_semantic')
+    cropped_img_dir = os.path.join(args.json_dir, 'cropped_images')
+    cropped_sem_dir = os.path.join(args.json_dir, 'cropped_semantic')
     os.makedirs(cropped_img_dir, exist_ok=True)
     os.makedirs(cropped_sem_dir, exist_ok=True)
-    for img_path, meta in tqdm(data.items(), position=0, leave=True):
-        abs_img_path = os.path.join(json_dir, img_path)
-        process_image(abs_img_path, meta, fdet, recropper, hpar, cropped_img_dir, cropped_sem_dir)
-    # save metadata file
-    with open(args.file, 'w') as f:
-        json.dump(data, f, indent=4)
-
+    json_file_paths = find_meta_files(args.json_dir)
+    for json_path in tqdm(json_file_paths, position=0, leave=True):
+        with open(json_path, 'r') as f:
+            data = json.load(f)
+        for img_path, meta in tqdm(data.items(), position=1, leave=False):
+            abs_img_path = os.path.join(args.json_dir, img_path)
+            process_image(abs_img_path, meta, fdet, recropper, hpar, cropped_img_dir, cropped_sem_dir)
+        # save metadata file
+        with open(json_path, 'w') as f:
+            json.dump(data, f, indent=4)
 
 
 if __name__ == '__main__':
