@@ -130,8 +130,15 @@ def crop_final(
     size -= 1
     bound = np.array([[left, top], [left, top + size], [left + size, top + size], [left + size, top]],
                         dtype=np.float32)
+    tf_quad = np.array([[0, 0], [0, crop_h], [crop_w, crop_h], [crop_w, 0]], dtype=np.float32)
 
     mat = cv2.getAffineTransform(quad[:3], bound[:3])
+
+    # Calculate the inverse of the affine transformation matrix
+    invmat = cv2.invertAffineTransform(mat)
+    # Apply the inverse transformation matrix to the transformed points
+    orig_quad = cv2.transform(tf_quad.reshape(1, -1, 2), invmat).reshape(-1, 2)
+
     if upsample is None or upsample == 1:
         crop_img = cv2.warpAffine(np.array(img), mat, crop_size, flags=cv2.INTER_LANCZOS4, borderMode=borderMode)
     else:
@@ -142,8 +149,6 @@ def crop_final(
 
     empty = np.ones_like(img) * 255
     crop_mask = cv2.warpAffine(empty, mat, crop_size)
-
-
 
     if True:
         mask_kernel = int(size*0.02)*2+1
@@ -157,7 +162,7 @@ def crop_final(
             crop_img = crop_img * blur_mask + blurred_img * (1 - blur_mask)
             crop_img = crop_img.astype(np.uint8)
     
-    return crop_img
+    return crop_img, orig_quad, tf_quad
 
 def find_center_bbox(roi_box_lst, w, h):
     bboxes = np.array(roi_box_lst)
@@ -166,7 +171,7 @@ def find_center_bbox(roi_box_lst, w, h):
     dist = np.stack([dx,dy],1)
     return np.argmin(np.linalg.norm(dist, axis=1))
 
-class Recropper:
+class FrontViewRecropper(object):
     def __init__(self, config_file='TDDFA_V2/configs/mb1_120x120.yml', use_onnx=False, mode='gpu'):
         self.cfg = yaml.load(open(config_file), Loader=yaml.SafeLoader)
         self.size = 512
@@ -184,75 +189,75 @@ class Recropper:
             self.face_boxes = FaceBoxes()
 
     def __call__(self, image_data, landmarks):
-            quad, quad_c, quad_x, quad_y = get_crop_bound(landmarks)
-            for iteration in range(1):
-                bound = np.array([[0, 0], [0, self.size-1], [self.size-1, self.size-1], [self.size-1, 0]], dtype=np.float32)
-                mat = cv2.getAffineTransform(quad[:3], bound[:3])
-                img = crop_image(image_data, mat, self.size, self.size)
-                h, w = img.shape[:2]
+        quad, quad_c, quad_x, quad_y = get_crop_bound(landmarks)
 
-                # Detect faces, get 3DMM params and roi boxes
-                boxes = self.face_boxes(img)
-                if len(boxes) == 0:
-                    raise RuntimeError(f'No face detected')
+        bound = np.array([[0, 0], [0, self.size-1], [self.size-1, self.size-1], [self.size-1, 0]], dtype=np.float32)
+        mat = cv2.getAffineTransform(quad[:3], bound[:3])
+        img = crop_image(image_data, mat, self.size, self.size)
+        h, w = img.shape[:2]
 
-                param_lst, roi_box_lst = self.tddfa(img, boxes)
-                box_idx = find_center_bbox(roi_box_lst, w, h)
+        # Detect faces, get 3DMM params and roi boxes
+        boxes = self.face_boxes(img)
+        if len(boxes) == 0:
+            raise RuntimeError(f'No face detected')
+
+        param_lst, roi_box_lst = self.tddfa(img, boxes)
+        box_idx = find_center_bbox(roi_box_lst, w, h)
 
 
-                param = param_lst[box_idx]
-                P = param[:12].reshape(3, -1)  # camera matrix
-                s_relative, R, t3d = P2sRt(P)
-                pose = matrix2angle(R)
-                pose = [p * 180 / np.pi for p in pose]
+        param = param_lst[box_idx]
+        P = param[:12].reshape(3, -1)  # camera matrix
+        s_relative, R, t3d = P2sRt(P)
+        pose = matrix2angle(R)
+        pose = [p * 180 / np.pi for p in pose]
 
-                # Adjust z-translation in object space
-                R_ = param[:12].reshape(3, -1)[:, :3]
-                u = self.tddfa.bfm.u.reshape(3, -1, order='F')
-                trans_z = np.array([ 0, 0, 0.5*u[2].mean() ]) # Adjust the object center
-                trans = np.matmul(R_, trans_z.reshape(3,1))
-                t3d += trans.reshape(3)
+        # Adjust z-translation in object space
+        R_ = param[:12].reshape(3, -1)[:, :3]
+        u = self.tddfa.bfm.u.reshape(3, -1, order='F')
+        trans_z = np.array([ 0, 0, 0.5*u[2].mean() ]) # Adjust the object center
+        trans = np.matmul(R_, trans_z.reshape(3,1))
+        t3d += trans.reshape(3)
 
-                ''' Camera extrinsic estimation for GAN training '''
-                # Normalize P to fit in the original image (before 3DDFA cropping)
-                sx, sy, ex, ey = roi_box_lst[0]
-                scale_x = (ex - sx) / self.tddfa.size
-                scale_y = (ey - sy) / self.tddfa.size
-                t3d[0] = (t3d[0]-1) * scale_x + sx
-                t3d[1] = (self.tddfa.size-t3d[1]) * scale_y + sy
-                t3d[0] = (t3d[0] - 0.5*(w-1)) / (0.5*(w-1)) # Normalize to [-1,1]
-                t3d[1] = (t3d[1] - 0.5*(h-1)) / (0.5*(h-1)) # Normalize to [-1,1], y is flipped for image space
-                t3d[1] *= -1
-                t3d[2] = 0 # orthogonal camera is agnostic to Z (the model always outputs 66.67)
+        ''' Camera extrinsic estimation for GAN training '''
+        # Normalize P to fit in the original image (before 3DDFA cropping)
+        sx, sy, ex, ey = roi_box_lst[0]
+        scale_x = (ex - sx) / self.tddfa.size
+        scale_y = (ey - sy) / self.tddfa.size
+        t3d[0] = (t3d[0]-1) * scale_x + sx
+        t3d[1] = (self.tddfa.size-t3d[1]) * scale_y + sy
+        t3d[0] = (t3d[0] - 0.5*(w-1)) / (0.5*(w-1)) # Normalize to [-1,1]
+        t3d[1] = (t3d[1] - 0.5*(h-1)) / (0.5*(h-1)) # Normalize to [-1,1], y is flipped for image space
+        t3d[1] *= -1
+        t3d[2] = 0 # orthogonal camera is agnostic to Z (the model always outputs 66.67)
 
-                s_relative = s_relative * 2000
-                scale_x = (ex - sx) / (w-1)
-                scale_y = (ey - sy) / (h-1)
-                s = (scale_x + scale_y) / 2 * s_relative
-                # print(f"[{iteration}] s={s} t3d={t3d}")
+        s_relative = s_relative * 2000
+        scale_x = (ex - sx) / (w-1)
+        scale_y = (ey - sy) / (h-1)
+        s = (scale_x + scale_y) / 2 * s_relative
+        # print(f"[{iteration}] s={s} t3d={t3d}")
 
-                if s < 0.7 or s > 1.3: raise RuntimeError()
-                if abs(pose[0]) > 90 or abs(pose[1]) > 80 or abs(pose[2]) > 50: raise RuntimeError()
-                if abs(t3d[0]) > 1. or abs(t3d[1]) > 1.: raise RuntimeError()
+        if s < 0.7 or s > 1.3: raise RuntimeError()
+        if abs(pose[0]) > 90 or abs(pose[1]) > 80 or abs(pose[2]) > 50: raise RuntimeError()
+        if abs(t3d[0]) > 1. or abs(t3d[1]) > 1.: raise RuntimeError()
 
-                quad_c = quad_c + quad_x * t3d[0]
-                quad_c = quad_c - quad_y * t3d[1]
-                quad_x = quad_x * s
-                quad_y = quad_y * s
-                c, x, y = quad_c, quad_x, quad_y
-                quad = np.stack([c - x - y, c - x + y, c + x + y, c + x - y]).astype(np.float32)
+        quad_c = quad_c + quad_x * t3d[0]
+        quad_c = quad_c - quad_y * t3d[1]
+        quad_x = quad_x * s
+        quad_y = quad_y * s
+        c, x, y = quad_c, quad_x, quad_y
+        quad = np.stack([c - x - y, c - x + y, c + x + y, c + x - y]).astype(np.float32)
 
-                # final projection matrix
-                s = 1
-                t3d = 0 * t3d
-                R[:,:3] = R[:,:3] * s
-                P = np.concatenate([R,t3d[:,None]],1)
-                P = np.concatenate([P, np.array([[0,0,0,1.]])],0)
-                camera_poses = eg3dcamparams(P.flatten())
+        # final projection matrix
+        s = 1
+        t3d = 0 * t3d
+        R[:,:3] = R[:,:3] * s
+        P = np.concatenate([R,t3d[:,None]],1)
+        P = np.concatenate([P, np.array([[0,0,0,1.]])],0)
+        camera_poses = eg3dcamparams(P.flatten())
 
-                # Save cropped images
-                cropped_img = crop_final(image_data, size=self.size, quad=quad)
-                return cropped_img, camera_poses, quad
+        # Save cropped images
+        cropped_img, quad, tf_quad = crop_final(image_data, size=self.size, quad=quad)
+        return cropped_img, camera_poses, quad, tf_quad
 
 
 def main(args):

@@ -4,7 +4,7 @@ import argparse
 import numpy as np
 from tqdm import tqdm
 
-from utils.dataset_process import find_meta_files
+from mutils.dataset_process import find_meta_files
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Frontal View Pipeline')

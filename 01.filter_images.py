@@ -14,9 +14,7 @@ from tqdm import tqdm
 from multiprocessing import Pool
 
 from utils.filter import load_image_names, filter_invalid_and_small
-from utils.head_detection import YoloHeadDetector, crop_head_image
-from utils.face_landmark import FaceAlignmentDetector
-from utils.face_parsing import HeadParser
+from utils.head_detection import YoloHeadDetector
 from utils.tool import partition_dict
 
 
@@ -42,23 +40,14 @@ def main(args):
     # initialize detectors
     hbox_det = YoloHeadDetector(weights_file='assets/224x224_yolov4_hddet_480x640.onnx',
                                 input_width=640, input_height=480)
-    head_image_size = 1024
-    flmk_det = FaceAlignmentDetector()
-    hpar = HeadParser()
 
     # load image folder and save folder
     image_folder = args.image_folder
     assert os.path.exists(image_folder), f'image directory {image_folder} does not exist!'
     image_folder_name = os.path.basename(image_folder)
     save_folder = os.path.dirname(image_folder)
-    head_image_folder = os.path.join(save_folder, 'head_images')
-    os.makedirs(head_image_folder, exist_ok=True)
-    head_parsing_folder = os.path.join(save_folder, 'head_parsing')
-    os.makedirs(head_parsing_folder, exist_ok=True)
     print("image_folder_name:", image_folder_name)
     print("save_folder:", save_folder)
-    print("head_image_folder:", head_image_folder)
-    print("head_parsing_folder:", head_parsing_folder)
 
     # search through dataset dir and get all image formats
     print("loading images...")
@@ -71,43 +60,22 @@ def main(args):
         mp_results = list(tqdm(pool.imap(filter_invalid_and_small, image_paths), total=len(image_paths)))
     image_paths = [res for res in mp_results if res is not None]
 
-
     print("detecting head boxes...")
     for image_path in tqdm(image_paths):
         image_data = cv2.imread(image_path)
         head_boxes = hbox_det(image_data.copy(), isBGR=True)
         if head_boxes is None or head_boxes.shape[0] == 0:
             continue
-        image_name = os.path.basename(image_path)[:-4]
         image_path = os.path.relpath(image_path, os.path.realpath(save_folder))
         meta_dict[image_path] = {
             'data_source': args.data_source,
             'raw': {
                 'file_path': image_path,
                 'head_boxes': {}
-            },
-            'head': {}
+            }
         }
         for idx, box in enumerate(head_boxes):
             meta_dict[image_path]['raw']['head_boxes'][f'{idx:02d}'] = box.tolist()
-            head_image = crop_head_image(image_data.copy(), box)
-            assert head_image.shape[0] == head_image.shape[1]
-            head_image = cv2.resize(head_image, (head_image_size, head_image_size))
-            head_image_path = os.path.join(head_image_folder, f"{image_name}_{idx:02d}.jpg")
-            cv2.imwrite(head_image_path, head_image)
-            landmarks = flmk_det(head_image, True)
-            if landmarks is not None:
-                landmarks = landmarks.tolist()
-            parsing = hpar(head_image, True)
-            head_parsing_path = os.path.join(head_parsing_folder, f"{image_name}_{idx:02d}.png")
-            cv2.imwrite(head_parsing_path, parsing)
-            head_image_path = os.path.relpath(head_image_path, os.path.realpath(save_folder))
-            head_parsing_path = os.path.relpath(head_parsing_path, os.path.realpath(save_folder))
-            meta_dict[image_path]['head'][f'{idx:02d}'] = {
-                'image_path': head_image_path,
-                'parsing_path': head_parsing_path,
-                'landmarks': landmarks
-            }
 
     print("saving meta files...")
     total_partition = len(meta_dict) // args.partition_size + 1
@@ -119,6 +87,6 @@ def main(args):
 
 
 if __name__ == '__main__':
-    #! Need to check if the results are correct, box location and landmark location.
+    # Box Checked.
     args = parse_args()
     main(args)

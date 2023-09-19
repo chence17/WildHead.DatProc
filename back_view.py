@@ -9,7 +9,7 @@ from scipy.spatial.transform import Rotation
 
 
 from face_parsing import show_image, HeadParser
-from recrop_images import crop_final, eg3dcamparams
+from utils.recrop_images import crop_final, eg3dcamparams
 from face3d import mesh
 from face3d.mesh_io.mesh import load_obj_mesh
 
@@ -195,11 +195,7 @@ def get_scaled_hbox(ratio, msk_hbox, hbox):
     return hbox_
 
 
-def hbox2quad(hbox):
-    x1, y1, w, h = hbox
-    x2, y2 = x1 + w, y1 + h
-    quad = np.array([[x1, y1], [x1, y2], [x2, y2], [x2, y1]]).astype(np.float32)
-    return quad
+
 
 
 if __name__ == "__main__":

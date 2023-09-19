@@ -12,7 +12,7 @@ class FaceAlignmentDetector():
                                                      device=device, face_detector='sfd')
         self.score_thres = score_thres
 
-    def __call__(self, image_data: np.ndarray, isBGR: bool, image_upper_right=None):
+    def __call__(self, image_data: np.ndarray, isBGR: bool, image_upper_left=None):
         # The image_data here is a cropped region from original image.
         # The output of this function is the absolute coorinate of landmarks in the image
         if isBGR: image_data = cv2.cvtColor(image_data, cv2.COLOR_BGR2RGB)
@@ -30,8 +30,8 @@ class FaceAlignmentDetector():
             if max_score < self.score_thres:
                 return None
             ret_landmarks = landmarks[0][max_score_idx][:, :2] * (1 / scale)
-        if image_upper_right is not None:
-            return ret_landmarks + image_upper_right
+        if image_upper_left is not None:
+            return ret_landmarks + image_upper_left
         else:
             return ret_landmarks
 

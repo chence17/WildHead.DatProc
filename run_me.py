@@ -12,7 +12,7 @@ from utils.filter import filter_invalid_and_small
 from utils.head_detection import YoloHeadDetector, resize_and_pad_image
 from utils.face_landmark import FaceAlignmentDetector
 from utils.face_parsing import HeadParser
-from recrop_images import Recropper
+from utils.recrop_images import Recropper
 from back_view import WHENetHeadPoseEstimator, get_rotate_angle, hbox2quad, rotate_quad, crop_final, calculate_R
 from back_view import eg3dcamparams
 

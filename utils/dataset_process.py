@@ -59,5 +59,5 @@ if __name__ == '__main__':
     #     x2, y2 = x1 + w, y1 + h
     #     cv2.rectangle(img, (x1, y1), (x2, y2), (0, 0, 255))
     #     # detect face
-    #     dets = d_det(img[y1:y2, x1:x2], isBGR=True, image_upper_right=np.array([x1, y1]))
+    #     dets = d_det(img[y1:y2, x1:x2], isBGR=True, image_upper_left=np.array([x1, y1]))
         

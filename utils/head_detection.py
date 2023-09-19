@@ -120,46 +120,6 @@ def rescale_headbox(box, image_w, image_h, factor=1.2, allow_overflow=True):
     return np.array([x_min, y_min, w, h, w * h]).astype(np.float32)
 
 
-def crop_head_image(image_data, box):
-    # expected input: [x_min, y_min, w, h]
-    # print('box', box)
-    x_min, y_min, w, h = np.int32(box)
-    x_max, y_max = x_min + w, y_min + h
-    # print(x_min, y_min, x_max, y_max)
-    top_size, bottom_size, left_size, right_size = 0, 0, 0, 0
-    if x_min < 0:
-        left_size = abs(x_min)
-        x_min = 0
-    if y_min < 0:
-        top_size = abs(y_min)
-        y_min = 0
-    if x_max > image_data.shape[1]:
-        right_size = abs(x_max - image_data.shape[1])
-        x_max = image_data.shape[1]
-    if y_max > image_data.shape[0]:
-        bottom_size = abs(y_max - image_data.shape[0])
-        y_max = image_data.shape[0]
-    # print(top_size, bottom_size, left_size, right_size)
-    crop_img = image_data[y_min:y_max, x_min:x_max]
-    # print(crop_img.shape)
-    if top_size + bottom_size + left_size + right_size != 0:
-        crop_msk = np.ones_like(crop_img) * 255
-        crop_img = cv2.copyMakeBorder(crop_img, top_size, bottom_size, left_size, right_size, borderType=cv2.BORDER_REFLECT)
-        crop_msk = cv2.copyMakeBorder(crop_msk, top_size, bottom_size, left_size, right_size, borderType=cv2.BORDER_CONSTANT, value=0)
-        size = max(crop_img.shape[:2])
-        mask_kernel = int(size*0.02)*2+1
-        blur_kernel = int(size*0.03)*2+1
-        blur_mask = cv2.blur(crop_msk.astype(np.float32).mean(2), (mask_kernel, mask_kernel)) / 255.0
-        blur_mask = blur_mask[..., np.newaxis]  # .astype(np.float32) / 255.0
-        blurred_img = cv2.blur(crop_img, (blur_kernel, blur_kernel), 0)
-        crop_img = crop_img * blur_mask + blurred_img * (1 - blur_mask)
-        crop_img = crop_img.astype(np.uint8)
-    # print(crop_img.shape, (h, w))
-    assert crop_img.shape[0] == h
-    assert crop_img.shape[1] == w
-    return crop_img
-
-
 class YoloHeadDetector(object):
     def __init__(self, weights_file: str, input_width: int = 640, input_height: int = 480) -> None:
         self.weights_file = weights_file

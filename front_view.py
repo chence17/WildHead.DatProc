@@ -1,12 +1,11 @@
 import os
-import re
 import cv2
 import json
 import argparse
 import numpy as np
 from tqdm import tqdm
 
-from recrop_images import Recropper
+from utils.recrop_images import Recropper
 from utils.face_parsing import HeadParser
 from utils.dataset_process import FaceAlignmentDetector, ProcessError, calc_h2b_ratio, find_meta_files
 
