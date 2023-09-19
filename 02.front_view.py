@@ -155,5 +155,6 @@ def main(args):
 
 if __name__ == '__main__':
     # Camera Checked.
+    # TODO NEED TO CHECK PROCESSED WEB DATA
     args = parse_args()
     main(args)
