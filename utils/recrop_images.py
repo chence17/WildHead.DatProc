@@ -130,7 +130,7 @@ def crop_final(
     size -= 1
     bound = np.array([[left, top], [left, top + size], [left + size, top + size], [left + size, top]],
                         dtype=np.float32)
-    tf_quad = np.array([[0, 0], [0, crop_h], [crop_w, crop_h], [crop_w, 0]], dtype=np.float32)
+    tf_quad = np.array([[0, 0], [0, crop_h-1], [crop_w-1, crop_h-1], [crop_w-1, 0]], dtype=np.float32)
 
     mat = cv2.getAffineTransform(quad[:3], bound[:3])
 
