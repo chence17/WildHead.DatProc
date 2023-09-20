@@ -157,5 +157,6 @@ def main(args):
 if __name__ == '__main__':
     # Camera Checked.
     # TODO NEED TO CHECK PROCESSED WEB DATA
+    # TODO RECORD PROCESSING TIME PER 10K IMAGES
     args = parse_args()
     main(args)
