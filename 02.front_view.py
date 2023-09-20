@@ -127,11 +127,11 @@ def main(args):
                 align_parsing_path = os.path.join(align_parsing_folder, f"{image_name}_{box_id}.png")
                 cv2.imwrite(align_parsing_path, cropped_par)
                 dtdict[dtkey]['head'][box_id]['view'] = 'front'
-                # ! Modify followings to be relative path
-                dtdict[dtkey]['head'][box_id]['head_image_path'] = head_image_path
-                dtdict[dtkey]['head'][box_id]['head_parsing_path'] = head_parsing_path
-                dtdict[dtkey]['head'][box_id]['align_image_path'] = align_image_path
-                dtdict[dtkey]['head'][box_id]['align_parsing_path'] = align_parsing_path
+                # !TODO: modify path
+                dtdict[dtkey]['head'][box_id]['head_image_path'] = os.path.relpath(head_image_path, save_folder)
+                dtdict[dtkey]['head'][box_id]['head_parsing_path'] = os.path.relpath(head_parsing_path, save_folder)
+                dtdict[dtkey]['head'][box_id]['align_image_path'] = os.path.relpath(align_image_path, save_folder)
+                dtdict[dtkey]['head'][box_id]['align_parsing_path'] = os.path.relpath(align_parsing_path, save_folder)
             except:
                 if box_id not in dtdict[dtkey]['raw']['landmarks'].keys():
                     dtdict[dtkey]['raw']['landmarks'][box_id] = None
