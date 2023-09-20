@@ -4,11 +4,13 @@ import json
 import argparse
 import numpy as np
 from tqdm import tqdm
-from utils.face_landmark import FaceAlignmentDetector
-from utils.recrop_images import FrontViewRecropper
+
+from utils.recrop_images import crop_final
 from utils.face_parsing import HeadParser
-from utils.fv_utils import rotate_image, generate_results, crop_head_image, crop_head_parsing
-from utils.tool import R2hpose
+from utils.fv_utils import generate_results, crop_head_parsing
+from utils.head_pose_estimation import WHENetHeadPoseEstimator
+from utils.bv_utils import estimate_rotation_angle, rotate_image, rotate_quad, get_final_crop_size
+from utils.tool import transform_box, hpose2camera, box2quad
 
 
 def parse_args():
@@ -30,19 +32,14 @@ def main(args):
     with open(args.json_file, 'r', encoding='utf8') as f:
         dtdict = json.load(f)
 
-    flmk_det = FaceAlignmentDetector()
-    recropper = FrontViewRecropper()
     hpar = HeadParser()
-    head_image_size = 1024
+    pe = WHENetHeadPoseEstimator('assets/whenet_1x3x224x224_prepost.onnx')
+    assert pe.input_height == pe.input_width
 
-    # inverse convert from OpenCV camera
-    convert = np.array([
-        [1, 0, 0, 0],
-        [0, -1, 0, 0],
-        [0, 0, -1, 0],
-        [0, 0, 0, 1],
-    ]).astype(np.float32)
-    inv_convert = np.linalg.inv(convert)
+    scale = [0.6, 0.6]
+    shift = [0., 0.]
+    head_image_size = 1024
+    crop_size = get_final_crop_size(512)
 
     save_folder = os.path.dirname(args.json_file)
     head_image_folder = os.path.join(save_folder, 'head_images')
@@ -59,42 +56,52 @@ def main(args):
     print("align_parsing_folder:", align_parsing_folder)
 
     for dtkey, dtitem in tqdm(dtdict.items()):
+        head_boxes = dtitem['raw']['head_boxes']
+
+        need_process = False
+        for box_id, box in head_boxes.items():
+            if box_id not in dtdict[dtkey]['head'].keys():
+                need_process = True
+                break
+            if dtdict[dtkey]['head'][box_id]['view'] is None:
+                need_process = True
+                break
+        if not need_process:
+            continue
+
         image_path = os.path.join(save_folder, dtitem['raw']['file_path'])
         image_name = os.path.basename(image_path)[:-4]
         image_data = cv2.imread(image_path)
-        head_boxes = dtitem['raw']['head_boxes']
-        dtdict[dtkey]['raw']['landmarks'] = {}
-        dtdict[dtkey]['raw']['raw_quad'] = {}
-        dtdict[dtkey]['raw']['tgt_quad'] = {}
-        dtdict[dtkey]['raw']['rot_quad'] = {}
-        dtdict[dtkey]['raw']['q2b_tf'] = {}
-        dtdict[dtkey]['raw']['rotmat'] = {}
-        dtdict[dtkey]['raw']['head_boxes_resize'] = head_image_size
-        dtdict[dtkey]['head'] = {}
         for box_id, box in head_boxes.items():
-            dtdict[dtkey]['head'][box_id] = {}
+            if box_id in dtdict[dtkey]['head'].keys():
+                if dtdict[dtkey]['head'][box_id]['view'] is not None:
+                    continue
             try:
-                box_np = np.array(box)
-                head_image = crop_head_image(image_data.copy(), box_np)
-                assert head_image.shape[0] == head_image.shape[1]
-                landmarks = flmk_det(head_image, True, box_np[:2])
-                assert landmarks is not None
-                assert np.sum(landmarks < 0) == 0
-                dtdict[dtkey]['raw']['landmarks'][box_id] = landmarks.tolist()
+                if box_id not in dtdict[dtkey]['raw']['landmarks'].keys():
+                    dtdict[dtkey]['raw']['landmarks'][box_id] = None
 
-                cropped_img, camera_poses, quad, tf_quad = recropper(image_data.copy(), landmarks)
-                quad, tf_quad = np.array(quad), np.array(tf_quad)
-                dtdict[dtkey]['head'][box_id]['camera'] = camera_poses.tolist()
+                box_np = np.array(box)
+                rot_quad = box2quad(transform_box(box, scale, shift))
+                rot_angle, rot_center = estimate_rotation_angle(image_data.copy(), box_np, pe, iterations=3)
+                rotated_image, rotmat = rotate_image(image_data.copy(), rot_center, rot_angle)
+                dtdict[dtkey]['raw']['rotmat'][box_id] = rotmat.tolist()
+                dtdict[dtkey]['raw']['rot_quad'][box_id] = rot_quad.tolist()
+
+                quad = rotate_quad(rot_quad, rot_center, -rot_angle)
+                cropped_img, _, tf_quad = crop_final(image_data.copy(), size=crop_size, quad=quad, top_expand=0.,
+                                                     left_expand=0., bottom_expand=0., right_expand=0.)
                 dtdict[dtkey]['raw']['raw_quad'][box_id] = quad.tolist()
                 dtdict[dtkey]['raw']['tgt_quad'][box_id] = tf_quad.tolist()
 
-                # cam2world
-                cam2world = camera_poses[:16].reshape(4, 4)
-                P = np.linalg.inv(cam2world)
-                R_in = inv_convert @ P
-                R_in = R_in[:3, :3]
-                hpose = R2hpose(R_in)
-                dtdict[dtkey]['head'][box_id]['hpose'] = hpose  # yaw, roll, pitch
+                head_image, head_crop_box, head_rot_quad = generate_results(rotated_image, rot_quad, box_np,
+                                                                            head_image_size)
+                dtdict[dtkey]['head'][box_id]['align_box'] = head_crop_box.tolist()  # [x1, y1, w, h]
+                dtdict[dtkey]['head'][box_id]['align_quad'] = head_rot_quad.tolist()  # [tl, bl, br, tr]
+
+                hpose = pe(head_image, isBGR=True)
+                dtdict[dtkey]['head'][box_id]['hpose'] = hpose.astype(np.float32).tolist()  # yaw, roll, pitch
+                camera_poses = hpose2camera(hpose)
+                dtdict[dtkey]['head'][box_id]['camera'] = camera_poses.tolist()
 
                 quad_w = np.linalg.norm(quad[2] - quad[1])
                 quad_h = np.linalg.norm(quad[1] - quad[0])
@@ -106,14 +113,6 @@ def main(args):
                     'scale': [quad_w / hbox_w, quad_h / hbox_h],
                     'shift': [(quad_center[0] - hbox_center[0]) / hbox_w, (quad_center[1] - hbox_center[1]) / hbox_h]
                 }
-
-                rotated_image, rotmat, rot_quad = rotate_image(image_data.copy(), quad, tf_quad, borderMode=cv2.BORDER_REFLECT, upsample=2)
-                dtdict[dtkey]['raw']['rotmat'][box_id] = rotmat.tolist()
-                dtdict[dtkey]['raw']['rot_quad'][box_id] = rot_quad.tolist()
-
-                head_image, head_crop_box, head_rot_quad = generate_results(rotated_image, rot_quad, box_np, head_image_size)
-                dtdict[dtkey]['head'][box_id]['align_box'] = head_crop_box.tolist() # [x1, y1, w, h]
-                dtdict[dtkey]['head'][box_id]['align_quad'] = head_rot_quad.tolist() # [tl, bl, br, tr]
 
                 head_parsing = hpar(head_image, is_bgr=True, show=False)
                 cropped_par = crop_head_parsing(head_parsing.copy(), head_crop_box)
@@ -129,7 +128,7 @@ def main(args):
                 cv2.imwrite(align_image_path, cropped_img)
                 align_parsing_path = os.path.join(align_parsing_folder, f"{image_name}_{box_id}.png")
                 cv2.imwrite(align_parsing_path, cropped_par)
-                dtdict[dtkey]['head'][box_id]['view'] = 'front'
+                dtdict[dtkey]['head'][box_id]['view'] = 'back'
                 dtdict[dtkey]['head'][box_id]['head_image_path'] = os.path.relpath(head_image_path, save_folder)
                 dtdict[dtkey]['head'][box_id]['head_parsing_path'] = os.path.relpath(head_parsing_path, save_folder)
                 dtdict[dtkey]['head'][box_id]['align_image_path'] = os.path.relpath(align_image_path, save_folder)
@@ -160,3 +159,4 @@ if __name__ == '__main__':
     # Camera Checked.
     args = parse_args()
     main(args)
+
