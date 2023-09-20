@@ -43,7 +43,7 @@ def main(args):
     print("data item:", args.data_item)
     dt = dtdict[args.data_item]
     for box_id, box_dt in dt['head'].items():
-        cam = box_dt['camera']
+        cam = np.array(box_dt['camera'])
         r_img = render_camera(cam)
         h, w = r_img.shape[:2]
         a_img = cv2.imread(os.path.join(root_folder, box_dt['align_image_path']))

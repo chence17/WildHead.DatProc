@@ -55,3 +55,10 @@ def estimate_rotation_angle(image_data, box_np, pe, iterations=3):
         R = hpose2R(hpose)
         angle += calculate_y_angle(R)
     return angle, box_center
+
+
+def get_final_crop_size(size, top_expand=0.1, left_expand=0.05, bottom_expand=0.0, right_expand=0.05):
+    crop_w = int(size * (1 + left_expand + right_expand))
+    crop_h = int(size * (1 + top_expand + bottom_expand))
+    assert crop_w == crop_h
+    return crop_w
