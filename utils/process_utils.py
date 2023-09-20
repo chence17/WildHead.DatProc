@@ -1,15 +1,7 @@
 import os
 import re
 import cv2
-import dlib
-import json
-import torch
-import argparse
-import onnxruntime
 import numpy as np
-import numba as nb
-import face_alignment
-from tqdm import tqdm
 
 
 class ProcessError(Exception):
@@ -43,16 +35,4 @@ if __name__ == '__main__':
     test_mask = cv2.imread("/home/shitianhao/project/DatProc/assets/mask.jpg", cv2.IMREAD_GRAYSCALE)
     _, nm = calc_h2b_ratio(test_mask)
     cv2.imwrite("/home/shitianhao/project/DatProc/assets/nm.jpg", nm)
-    # hdet = YoloHeadDetector(weights_file='assets/224x224_yolov4_hddet_480x640.onnx',
-    #                         input_width=640, input_height=480)
-    # d_det= DlibDetector()
-    # img = cv2.imread("/home/shitianhao/project/DatProc/assets/mh_dataset/5.png")
-    # boxes = hdet(img, isBGR=True)
-    # print(boxes)
-    # for box in boxes:
-    #     x1, y1, w, h = box
-    #     x2, y2 = x1 + w, y1 + h
-    #     cv2.rectangle(img, (x1, y1), (x2, y2), (0, 0, 255))
-    #     # detect face
-    #     dets = d_det(img[y1:y2, x1:x2], isBGR=True, image_upper_left=np.array([x1, y1]))
         
