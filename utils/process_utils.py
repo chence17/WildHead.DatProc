@@ -12,11 +12,6 @@ import face_alignment
 from tqdm import tqdm
 
 
-
-
-
-
-
 class ProcessError(Exception):
     def __init__(self, message="Process Error"):
         self.message = message
