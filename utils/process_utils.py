@@ -31,6 +31,14 @@ def find_meta_files(root_dir):
         if match: json_file_paths.append(os.path.join(root_dir, filename))
     return json_file_paths
 
+def get_cam_sperical_coord(img_meta):
+    c2w = np.array(img_meta["head"]["00"]["camera"][:16]).reshape(4, 4)
+    T = c2w[:3, 3]
+    x, y, z = T
+    theta = np.rad2deg(np.arctan(np.sqrt(x**2+z**2)/y))
+    phi = np.rad2deg(np.arctan(z/x))+180
+    return theta, phi, x, y, z
+
 if __name__ == '__main__':
     test_mask = cv2.imread("/home/shitianhao/project/DatProc/assets/mask.jpg", cv2.IMREAD_GRAYSCALE)
     _, nm = calc_h2b_ratio(test_mask)
