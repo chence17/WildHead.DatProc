@@ -27,7 +27,7 @@ def main(args, logger:logging.Logger):
     with open(args.json_file, 'r') as f:
         json_data = json.load(f)
     for json_path, img_meta in tqdm(json_data.items()):
-        if img_meta['face_size'] == 0: continue
+        if img_meta['face_size'] != 0: continue
         save_img_path = img_meta['image_path'].replace('/datas/K-Hairstyle', args.output)
         if os.path.exists(save_img_path): continue
         os.makedirs(os.path.dirname(save_img_path), exist_ok=True)
