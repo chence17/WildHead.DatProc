@@ -16,18 +16,11 @@ def is_small(w, h, min_size=512):
 
 def filter_invalid_and_small(img_path):
     try:
-        if not os.path.exists(img_path):
-            # not exist
-            return None
+        assert os.path.exists(img_path) # not exist
         img_w, img_h = imagesize.get(img_path)
-        if is_small(img_h, img_w):
-            # small images
-            return None
-        else:
-            # valid images
-            return img_path
+        assert not(is_small(img_h, img_w)) # too small
+        return img_path
     except:
-        # invalid images
         return None
 
 
