@@ -1,3 +1,6 @@
+"""
+Following the previous step, this script reads the json and copies the filterd images to a new directory
+"""
 import os
 import json
 import shutil
