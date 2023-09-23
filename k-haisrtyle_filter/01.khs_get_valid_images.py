@@ -1,3 +1,7 @@
+"""
+Since the front view images of k-hairstyle is masked, we can only use the back view images in our dataset
+This script traverse khs dataset and creates a json specifying all the back view images, together with some of their meta info
+"""
 import os
 import re
 import cv2
