@@ -74,6 +74,9 @@ def main(args):
         dtdict[dtkey]['head'] = {}
 
         image_path = os.path.join(save_folder, dtitem['raw']['file_path'])
+        medium_path = '/'.join(
+            os.path.dirname(dtitem['raw']['file_path']).split('/')[1:]
+            )
         image_name = os.path.basename(image_path)[:-4]
         image_data = cv2.imread(image_path)
         for box_id, box in head_boxes.items():
@@ -139,14 +142,19 @@ def main(args):
                 cropped_par = cv2.resize(cropped_par, (cropped_img.shape[1], cropped_img.shape[0]),
                                          interpolation=cv2.INTER_NEAREST)
 
-                head_image_path = os.path.join(head_image_folder, f"{image_name}_{box_id}.png")
+                head_image_path = os.path.join(head_image_folder, medium_path, f"{image_name}_{box_id}.png")
+                os.makedirs(os.path.dirname(head_image_path), exist_ok=True)
                 cv2.imwrite(head_image_path, head_image)
-                head_parsing_path = os.path.join(head_parsing_folder, f"{image_name}_{box_id}.png")
+                head_parsing_path = os.path.join(head_parsing_folder, medium_path, f"{image_name}_{box_id}.png")
+                os.makedirs(os.path.dirname(head_parsing_path), exist_ok=True)
                 cv2.imwrite(head_parsing_path, head_parsing)
 
-                align_image_path = os.path.join(align_image_folder, f"{image_name}_{box_id}.png")
+                align_image_path = os.path.join(align_image_folder, medium_path, f"{image_name}_{box_id}.png")
+                print(f'align_img_path: {align_image_path},\n align_image_folder:{align_image_folder}\n, middle_path:{medium_path}\n, image_name:{image_name}\n, box_id:{box_id}')
+                os.makedirs(os.path.dirname(align_image_path), exist_ok=True)
                 cv2.imwrite(align_image_path, cropped_img)
-                align_parsing_path = os.path.join(align_parsing_folder, f"{image_name}_{box_id}.png")
+                align_parsing_path = os.path.join(align_parsing_folder, medium_path, f"{image_name}_{box_id}.png")
+                os.makedirs(os.path.dirname(align_parsing_path), exist_ok=True)
                 cv2.imwrite(align_parsing_path, cropped_par)
                 dtdict[dtkey]['head'][box_id]['view'] = 'back'
                 dtdict[dtkey]['head'][box_id]['head_image_path'] = os.path.relpath(head_image_path, save_folder)
