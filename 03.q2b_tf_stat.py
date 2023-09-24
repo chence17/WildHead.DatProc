@@ -17,6 +17,7 @@ def main(args):
     meta_file_paths = find_meta_files(args.json_dir)
     dataset_scales = []
     dataset_shifts = []
+    num_imgs = 0
     for meta_file_path in tqdm(meta_file_paths, position=0, leave=True):
         with open(meta_file_path, 'r') as f:
             meta = json.load(f)
@@ -26,6 +27,7 @@ def main(args):
             img_shifts = []
             for box_q2b_val in raw_meta['q2b_tf'].values():
                 if box_q2b_val is None: continue
+                num_imgs += 1
                 scale = box_q2b_val['scale']
                 shift = box_q2b_val['shift']
                 img_scales.append(scale)
@@ -37,6 +39,7 @@ def main(args):
     average_scale = np.mean(dataset_scales, axis=0)
     average_shift = np.mean(dataset_shifts, axis=0)
     print(f'Average scale: {average_scale}; Average shift: {average_shift}')
+    print(f'Number of samples: {num_imgs}')
     
 
     

@@ -36,8 +36,8 @@ def main(args):
     pe = WHENetHeadPoseEstimator('assets/whenet_1x3x224x224_prepost.onnx')
     assert pe.input_height == pe.input_width
 
-    scale = [0.6, 0.6]
-    shift = [0., 0.]
+    scale = [0.7417686609206039, 0.7417686609206039]
+    shift = [-0.007425799169690871, 0.00886478197975557]
     head_image_size = 1024
     crop_size = get_final_crop_size(512)
 
