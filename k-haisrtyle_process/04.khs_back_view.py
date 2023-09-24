@@ -150,7 +150,6 @@ def main(args):
                 cv2.imwrite(head_parsing_path, head_parsing)
 
                 align_image_path = os.path.join(align_image_folder, medium_path, f"{image_name}_{box_id}.png")
-                print(f'align_img_path: {align_image_path},\n align_image_folder:{align_image_folder}\n, middle_path:{medium_path}\n, image_name:{image_name}\n, box_id:{box_id}')
                 os.makedirs(os.path.dirname(align_image_path), exist_ok=True)
                 cv2.imwrite(align_image_path, cropped_img)
                 align_parsing_path = os.path.join(align_parsing_folder, medium_path, f"{image_name}_{box_id}.png")
