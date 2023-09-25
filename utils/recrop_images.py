@@ -27,6 +27,7 @@ from TDDFA_V2.utils.tddfa_util import str2bool
 
 
 def eg3dcamparams(R_in):
+    # World Coordinate System: x(right), y(up), z(forward)
     camera_dist = 2.7
     intrinsics = np.array([[4.2647, 0, 0.5], [0, 4.2647, 0.5], [0, 0, 1]])
     # assume inputs are rotation matrices for world2cam projection

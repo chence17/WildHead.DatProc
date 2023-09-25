@@ -1,28 +1,34 @@
 '''
-Author: chence antonio.chan.cc@outlook.com
-Date: 2023-09-17 14:44:45
-LastEditors: chence antonio.chan.cc@outlook.com
-LastEditTime: 2023-09-24 16:09:56
-FilePath: /DatProc/01.filter_images.py
-Description: 01.filter_images.py
+This script is modified from 01.filter_images.py to filter small images from the back-view only k-hairstyle dataset.
 '''
 import os
+import sys
 import cv2
 import json
 import argparse
 from tqdm import tqdm
 from multiprocessing import Pool
 
-from utils.filter import load_image_names, filter_invalid_and_small
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.filter import filter_invalid_and_small
 from utils.head_detection import YoloHeadDetector
 from utils.tool import partition_dict
 
+def load_image_names(image_folder):
+    image_paths = []
+    image_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".tiff"]
+    for root, dirs, files in os.walk(image_folder):
+        for file_name in files:
+            ext = os.path.splitext(file_name)[-1]
+            if ext in image_extensions:
+                image_paths.append(os.path.join(root, file_name))
+    return image_paths
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Filter images.')
     parser.add_argument('-i', '--image_folder', type=str, help='path to the folder that holds images', required=True)
     parser.add_argument('-d', '--data_source', type=str, help='data source, eg: web/data', required=True)
-    parser.add_argument('-j', '--num_processes', type=int, help='number of processes (default 64)', default=64)
+    parser.add_argument('-j', '--num_processes', type=int, help='number of processes (default 128)', default=128)
     parser.add_argument('-p', '--partition_size', type=int, help='number of images in a partition of datset (default 10000)', default=10000)
     args, _ = parser.parse_known_args()
 
