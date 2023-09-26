@@ -10,7 +10,7 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 
-from utils.visualize_utils import CameraPoseVisualizer
+from utils.visualize import CameraPoseVisualizer
 
 json_file_path = './temp/sample.json'
 colors = ('r', 'g', 'b', 'k')
