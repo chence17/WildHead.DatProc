@@ -1,3 +1,13 @@
+'''
+Author: tianhao 120090472@link.cuhk.edu.cn
+Date: 2023-09-26 09:58:29
+LastEditors: tianhao 120090472@link.cuhk.edu.cn
+LastEditTime: 2023-09-26 16:28:53
+FilePath: /DatProc/utils/cam_pose_utils.py
+Description: 
+
+Copyright (c) 2023 by ${git_name_email}, All Rights Reserved. 
+'''
 import numpy as np
 
 def get_cam_coords(c2w):
