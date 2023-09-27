@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import os
 import os.path as osp
-# from plyfile import PlyData, PlyElement
+from plyfile import PlyData, PlyElement
 
 
 class MMeshMeta(object):
@@ -445,18 +445,18 @@ class MMeshMeta(object):
             self.vertices += [tuple(p + c)]
         return True
 
-    # def save(self, path):
-    #     assert path.endswith('.ply'), f"{path} is not a ply file! Only support ply file."
-    #     if osp.exists(path):
-    #         os.remove(path)
-    #     vertex = np.array(self.vertices,
-    #                       dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1'), ('green', 'u1'), ('blue', 'u1')])
-    #     vertex_el = PlyElement.describe(vertex, 'vertex')
-    #     face = np.array(self.faces,
-    #                     dtype=[('vertex_indices', 'i4', (3, )), ('red', 'u1'), ('green', 'u1'), ('blue', 'u1')])
-    #     face_el = PlyElement.describe(face, 'face')
-    #     PlyData([vertex_el, face_el]).write(path)
-    #     return True
+    def save(self, path):
+        assert path.endswith('.ply'), f"{path} is not a ply file! Only support ply file."
+        if osp.exists(path):
+            os.remove(path)
+        vertex = np.array(self.vertices,
+                          dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1'), ('green', 'u1'), ('blue', 'u1')])
+        vertex_el = PlyElement.describe(vertex, 'vertex')
+        face = np.array(self.faces,
+                        dtype=[('vertex_indices', 'i4', (3, )), ('red', 'u1'), ('green', 'u1'), ('blue', 'u1')])
+        face_el = PlyElement.describe(face, 'face')
+        PlyData([vertex_el, face_el]).write(path)
+        return True
 
 import numpy as np
 import matplotlib as mpl
