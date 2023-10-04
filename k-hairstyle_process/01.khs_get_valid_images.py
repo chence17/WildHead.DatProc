@@ -1,3 +1,11 @@
+'''
+Author: chence antonio.chan.cc@outlook.com
+Date: 2023-09-25 21:21:30
+LastEditors: chence antonio.chan.cc@outlook.com
+LastEditTime: 2023-09-28 19:35:14
+FilePath: /DatProc/k-hairstyle_process/01.khs_get_valid_images.py
+Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+'''
 """
 Since the front view images of k-hairstyle is masked, we can only use the back view images in our dataset
 This script traverse khs dataset and creates a json specifying all the back view images, together with some of their meta info
@@ -39,7 +47,7 @@ def process_json(json_file_path):
     polygon = json.loads(json_data.get('polygon2', '[]'))
     face_size = 0
     ratio = 0
-    if polygon: 
+    if polygon:
         polygon = polygon[0]
         blank = np.zeros((h, w), np.uint8)
         coords_list = []
@@ -52,7 +60,7 @@ def process_json(json_file_path):
         ratio = face_size/(h*w)
     return {json_file_path: {'h':h, 'w':w, 'face_size':face_size, 'ratio':ratio, 'image_path':image_path}}
 
-khs_label_root_dirs = ['/datas/K-Hairstyle/Validation/rawset/labels/0003.rawset', '/datas/K-Hairstyle/Training/rawset/labels/0003.rawset']
+khs_label_root_dirs = ['/data_new/chence/K-Hairstyle/Validation/rawset/labels/0003.rawset', '/data_new/chence/K-Hairstyle/Training/rawset/labels/0003.rawset']
 # find all json files in khs_root_dir
 model_dir = []
 json_file_paths = []
@@ -69,5 +77,5 @@ with Pool(128) as p:
 
 output_meta = {k: v for d in res for k, v in d.items()}
 
-with open('k-haisrtyle_filter/khs_filter.json', 'w') as f:
+with open('/home/chence/Research/3DHeadGen/DatProc/temp/KHairstyle2/khs_filtered.json', 'w') as f:
     json.dump(output_meta, f, indent=4)
