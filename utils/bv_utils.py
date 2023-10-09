@@ -1,3 +1,11 @@
+'''
+Author: chence antonio.chan.cc@outlook.com
+Date: 2023-09-20 18:27:29
+LastEditors: chence antonio.chan.cc@outlook.com
+LastEditTime: 2023-10-04 20:34:23
+FilePath: /DatProc/utils/bv_utils.py
+Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+'''
 import cv2
 import numpy as np
 from utils.fv_utils import crop_head_image
