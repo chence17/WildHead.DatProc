@@ -25,7 +25,7 @@ data = []
 
 # Iterate over each JSON file in the input directory
 for filename in tqdm(os.listdir(input_directory)):
-    if filename.endswith("-12.json"):
+    if filename.startswith("meta_") and filename.endswith(".json"):
         with open(os.path.join(input_directory, filename), "r") as file:
             json_data = json.load(file)
             data.append(json_data)
