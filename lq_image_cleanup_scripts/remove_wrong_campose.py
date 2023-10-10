@@ -2,11 +2,11 @@
 Author: tianhao 120090472@link.cuhk.edu.cn
 Date: 2023-10-10 16:44:14
 LastEditors: chence antonio.chan.cc@outlook.com
-LastEditTime: 2023-10-10 21:58:52
+LastEditTime: 2023-10-10 22:58:00
 FilePath: /DatProc/lq_image_cleanup_scripts/remove_wrong_campose.py
 Description: 
 This script removes the wrong campose images from the dataset.json file.
-For LPFF, FFHQ, no image should be back facing.
+For LPFF, FFHQ, CelebA no image should be back facing.
 For K-Hairstyle, no image should be front facing.
 
 Copyright (c) 2023 by ${git_name_email}, All Rights Reserved. 
@@ -45,7 +45,7 @@ def get_cam_coords(c2w):
 
 args =  config_parser()
 assert os.path.exists(args.src_json), f'{args.src_json} does not exist.'
-save_json_path = args.src_json.replace('.json', f'_no_{args.filter_view}.json')
+save_json_path = args.src_json.replace('.json', f'_filtered.json')
 with open(args.src_json, 'r') as f:
     json_origin = json.load(f)
 json_no_wrong_campose = {}
@@ -71,7 +71,7 @@ for image, image_meta in tqdm(json_origin.items()):
                 (args.filter_view == 'front')      # and want to filter front
             ) or (
                 (theta >= -135 and theta <= -45) and # calculated back
-                (args.filter_view == 'back')        # and want to filter back
+                (args.filter_view == 'back')         # and want to filter back
             )
         ): # calculated front and filter front
             continue
