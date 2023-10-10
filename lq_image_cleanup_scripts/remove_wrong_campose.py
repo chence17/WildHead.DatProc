@@ -2,7 +2,7 @@
 Author: tianhao 120090472@link.cuhk.edu.cn
 Date: 2023-10-10 16:44:14
 LastEditors: chence antonio.chan.cc@outlook.com
-LastEditTime: 2023-10-10 18:41:54
+LastEditTime: 2023-10-10 22:38:38
 FilePath: /DatProc/lq_image_cleanup_scripts/remove_wrong_campose.py
 Description: 
 This script removes the wrong campose images from the dataset.json file.
@@ -50,10 +50,13 @@ with open(args.src_json, 'r') as f:
     json_origin = json.load(f)
 json_no_wrong_campose = {}
 # process
-print(f'Before processing, there are {len(json_origin)} images.')
+has_more_head_counter = 0
 for image, image_meta in tqdm(json_origin.items()):
     # make sure there is only one head left
-    assert len(image_meta["head"].keys()) <= 1, f'{image} has more than one head.'
+    if len(image_meta["head"].keys()) == 1:
+        print(f'{image} has more than one head.')
+        has_more_head_counter += 1
+        continue
     # load camera parameter
     for head_id, head_meta in image_meta["head"].items():
         cam_param = head_meta["camera"]
@@ -74,5 +77,7 @@ for image, image_meta in tqdm(json_origin.items()):
     json_no_wrong_campose[image] = image_meta
 print(f'After processing, there are {len(json_no_wrong_campose)} images.')
 
+print(f'Before processing, there are {len(json_origin)} images.')
+print(f'Ignoring {has_more_head_counter} images with more than one head.')
 with open(save_json_path, 'w') as f:
     json.dump(json_no_wrong_campose, f, indent=2)
