@@ -3,7 +3,7 @@
 Author: tianhao 120090472@link.cuhk.edu.cn
 Date: 2023-10-15 11:08:21
 LastEditors: tianhao 120090472@link.cuhk.edu.cn
-LastEditTime: 2023-10-15 13:20:34
+LastEditTime: 2023-10-15 13:45:13
 FilePath: /DatProc/X4.detect_blur.py
 Description:    
 
@@ -13,6 +13,7 @@ import os
 import cv2
 import json
 import tqdm
+import shutil
 import argparse
 import numpy as np
 from functools import partial
@@ -42,6 +43,7 @@ def get_blur_degree_laplacian(image: np.array):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input', help='path to json file.', type=str)
+    parser.add_argument('-o', '--output', help='path to copy clear images.', type=str, default='/data2/tianhao/DAD_clear_new')
     parser.add_argument('--lap_threshold', help='threshold for laplacian blur detection.', type=int, default=100)
     parser.add_argument('--svd_threshold', help='threshold for SVD blur detection.', type=int, default=0.6)
     parser.add_argument('--force', help='force to overwrite existing files.', action='store_true')
@@ -75,7 +77,7 @@ else:
     image_meta = {}
     process_files = get_images(args.input)
     for file in tqdm.tqdm(process_files):
-        image_abs_path = os.path.join(os.path.dirname(args.input), file)
+        image_abs_path = os.path.join(args.input, file)
         image_data = cv2.imread(image_abs_path, cv2.IMREAD_GRAYSCALE)
         svd_score = get_blur_degree_svd(image_data)
         laplacian_score = get_blur_degree_laplacian(image_data)
@@ -84,9 +86,15 @@ else:
         json.dump(image_meta, f)
 
 blur_image_meta = {}
-for key, value in tqdm.tqdm(image_meta.keys()):
+for key, value in tqdm.tqdm(image_meta.items()):
     if value['svd_score'] > args.svd_threshold or value['laplacian_score'] < args.lap_threshold:
         blur_image_meta[key] = value
+    else:
+        src_image_abs_path = os.path.join(args.input, key)
+        dst_image_abs_path = os.path.join(args.output, key)
+        shutil.copy(src_image_abs_path, dst_image_abs_path)
+        # copy clear images
+print(f'Of all {len(image_meta)} images, {len(blur_image_meta)} are blur.')
         
 with open(blur_image_out_name, 'w') as f:
     json.dump(blur_image_meta, f)
