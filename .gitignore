@@ -7,6 +7,7 @@ data_check
 experiments
 sources
 temp
+temp*
 .history
 assets
 
