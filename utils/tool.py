@@ -2,7 +2,7 @@
 Author: chence antonio.chan.cc@outlook.com
 Date: 2023-09-18 23:20:23
 LastEditors: chence antonio.chan.cc@outlook.com
-LastEditTime: 2023-09-19 22:57:40
+LastEditTime: 2023-10-16 10:38:37
 FilePath: /DatProc/utils/tool.py
 Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 '''
@@ -12,45 +12,13 @@ import numpy as np
 from scipy.spatial.transform import Rotation
 from face3d import mesh
 from face3d.mesh_io.mesh import load_obj_mesh
-from utils.recrop_images import eg3dcamparams
+# from utils.recrop_images import eg3dcamparams
 
 
 def partition_dict(d, partition_size):
     for i in range(0, len(d), partition_size):
         yield dict(list(d.items())[i:i + partition_size])
 
-
-def draw_detection_box(image_data, box, text):
-    # Determine the detection box coordinates
-    x, y, width, height = box
-    scale = math.ceil(math.sqrt(image_data.shape[0] * image_data.shape[1]) / 512)
-    thinkness = scale * 2
-    font_scale = scale * 0.9
-    offset_scale = scale * 10
-
-    # Draw the detection box
-    cv2.rectangle(image_data, (x, y), (x + width, y + height), (0, 255, 0), thinkness)
-
-    # Add a text label
-    cv2.putText(image_data, text, (x, y - offset_scale), cv2.FONT_HERSHEY_SIMPLEX, font_scale,
-                (0, 255, 0), thinkness)
-    return image_data
-
-
-def draw_facial_landmarks(image_data, landmarks, color=(0, 255, 0)):
-    scale = math.ceil(math.sqrt(image_data.shape[0] * image_data.shape[1]) / 512)
-    radius = scale * 2
-    for landmark in landmarks:
-        x, y = landmark
-        cv2.circle(image_data, (x, y), radius, color, -1)
-    return image_data
-
-
-def draw_quad(image_data, quad, color=(0, 255, 0)):
-    scale = math.ceil(math.sqrt(image_data.shape[0] * image_data.shape[1]) / 512)
-    thickness = scale * 2
-    cv2.polylines(image_data, [quad], isClosed=True, color=color, thickness=thickness)
-    return image_data
 
 
 def render_image(R, vertices, triangles, colors):

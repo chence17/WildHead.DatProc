@@ -9,6 +9,7 @@ sources
 temp
 temp*
 .history
+.vscode
 assets
 
 # Weights

@@ -1,9 +1,8 @@
-
 '''
 Author: tianhao 120090472@link.cuhk.edu.cn
 Date: 2023-10-15 11:08:21
-LastEditors: tianhao 120090472@link.cuhk.edu.cn
-LastEditTime: 2023-10-15 13:45:13
+LastEditors: chence antonio.chan.cc@outlook.com
+LastEditTime: 2023-10-15 15:59:22
 FilePath: /DatProc/X4.detect_blur.py
 Description:    
 
@@ -18,6 +17,7 @@ import argparse
 import numpy as np
 from functools import partial
 from multiprocessing import Pool
+
 
 def get_blur_degree_svd(image:np.array, sv_num=10):
     """
