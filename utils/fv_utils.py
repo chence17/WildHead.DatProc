@@ -15,7 +15,8 @@ def rotate_image(img, quad, tf_quad, borderMode=cv2.BORDER_REFLECT, upsample=2):
     else:
         assert isinstance(upsample, int)
         crop_size_large = (crop_w * upsample, crop_h * upsample)
-        crop_img = cv2.warpAffine(np.array(img), upsample * rotmat, crop_size_large, flags=cv2.INTER_LANCZOS4, borderMode=borderMode)
+        crop_img = cv2.warpAffine(np.array(img), upsample * rotmat, crop_size_large,
+                                  flags=cv2.INTER_LANCZOS4, borderMode=borderMode)
         crop_img = cv2.resize(crop_img, crop_size, interpolation=cv2.INTER_AREA)
 
     empty = np.ones_like(img) * 255
@@ -27,8 +28,8 @@ def rotate_image(img, quad, tf_quad, borderMode=cv2.BORDER_REFLECT, upsample=2):
         blur_kernel = int(size*0.03)*2+1
 
         if crop_mask.mean() < 255:
-            blur_mask = cv2.blur(crop_mask.astype(np.float32).mean(2),(mask_kernel,mask_kernel)) / 255.0
-            blur_mask = blur_mask[...,np.newaxis] #.astype(np.float32) / 255.0
+            blur_mask = cv2.blur(crop_mask.astype(np.float32).mean(2), (mask_kernel, mask_kernel)) / 255.0
+            blur_mask = blur_mask[..., np.newaxis]  #.astype(np.float32) / 255.0
             blurred_img = cv2.blur(crop_img, (blur_kernel, blur_kernel), 0)
             crop_img = crop_img * blur_mask + blurred_img * (1 - blur_mask)
             crop_img = crop_img.astype(np.uint8)

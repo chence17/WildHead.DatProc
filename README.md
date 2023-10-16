@@ -1,4 +1,26 @@
 # Work.3DHeadGen.DatProc
+## Refactor
+
+### `filter`
+
+`size_filter`: To filter image size.
+
+`blur_filter`: To filter blurry image.
+
+### `detector`
+
+`head_detector`: To detect head.
+
+### `visualize`
+
+`vis_2d`: To visualize 2d images.
+
+### `Cropper`
+
+`front_view_cropper`: To crop front view images.
+
+## Misc
+
 Data Processing for PanoHead
 
 ## Notes
