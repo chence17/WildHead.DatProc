@@ -44,8 +44,8 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input', help='path to json file.', type=str)
     parser.add_argument('-o', '--output', help='path to copy clear images.', type=str, default='/data2/tianhao/DAD_clear_new')
-    parser.add_argument('--lap_threshold', help='threshold for laplacian blur detection.', type=int, default=100)
-    parser.add_argument('--svd_threshold', help='threshold for SVD blur detection.', type=int, default=0.6)
+    parser.add_argument('--lap_threshold', help='threshold for laplacian blur detection.', type=int, default=50) # 50
+    parser.add_argument('--svd_threshold', help='threshold for SVD blur detection.', type=int, default=0.6) # 0.75
     parser.add_argument('--force', help='force to overwrite existing files.', action='store_true')
     return parser.parse_args()
 
@@ -77,7 +77,10 @@ else:
     image_meta = {}
     process_files = get_images(args.input)
     for file in tqdm.tqdm(process_files):
-        image_abs_path = os.path.join(args.input, file)
+        if os.path.basename(args.input) == 'dataset.json':
+            image_abs_path = os.path.join(os.path.dirname(args.input), 'align_images', file.replace('png', 'jpg'))
+        else:
+            image_abs_path = os.path.join(args.input, file)
         image_data = cv2.imread(image_abs_path, cv2.IMREAD_GRAYSCALE)
         svd_score = get_blur_degree_svd(image_data)
         laplacian_score = get_blur_degree_laplacian(image_data)
@@ -86,15 +89,34 @@ else:
         json.dump(image_meta, f)
 
 blur_image_meta = {}
+svd_blur = 0
+laplacian_blur = 0
+both = 0
+no = 0
+# stat blur images
 for key, value in tqdm.tqdm(image_meta.items()):
-    if value['svd_score'] > args.svd_threshold or value['laplacian_score'] < args.lap_threshold:
-        blur_image_meta[key] = value
-    else:
-        src_image_abs_path = os.path.join(args.input, key)
-        dst_image_abs_path = os.path.join(args.output, key)
-        shutil.copy(src_image_abs_path, dst_image_abs_path)
+    if value['svd_score'] > args.svd_threshold:
+        svd_blur += 1
+    if value['laplacian_score'] < args.lap_threshold:
+        laplacian_blur += 1
+    if value['svd_score'] > args.svd_threshold and value['laplacian_score'] < args.lap_threshold:
+        both += 1
+    if value['svd_score'] < args.svd_threshold and value['laplacian_score'] > args.lap_threshold:
+        no += 1
+    # else:
+    #     src_image_abs_path = os.path.join(args.input, key)
+    #     dst_image_abs_path = os.path.join(args.output, key)
+    #     shutil.copy(src_image_abs_path, dst_image_abs_path)
         # copy clear images
-print(f'Of all {len(image_meta)} images, {len(blur_image_meta)} are blur.')
-        
-with open(blur_image_out_name, 'w') as f:
-    json.dump(blur_image_meta, f)
+assert len(image_meta) == svd_blur + laplacian_blur - both + no
+results = {
+    'both': both,
+    'svd_blur': svd_blur,
+    'laplacian_blur': laplacian_blur,
+    'no': no
+}
+print(f'Total: {len(image_meta)}')
+for key, value in results.items():
+    print(f'{key}: {value}')        
+# with open(blur_image_out_name, 'w') as f:
+#     json.dump(blur_image_meta, f)
