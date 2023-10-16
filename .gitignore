@@ -11,7 +11,7 @@ temp*
 .history
 .vscode
 assets
-*.cpp
+# *.cpp
 
 # Weights
 *.pth
