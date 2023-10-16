@@ -10,6 +10,7 @@ temp
 temp*
 .history
 assets
+*.cpp
 
 # Weights
 *.pth
