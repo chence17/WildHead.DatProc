@@ -7,7 +7,8 @@ import numba as nb
 
 class HeadDetector(object):
     def __init__(self, weights_file: str, input_width: int = 640, input_height: int = 480, conf_thresh: float = 0.60,
-                 nms_thresh: float = 0.50, size_thres: int = 512) -> None:
+                 nms_thresh: float = 0.50, size_thres: int = 512,
+                 sort_by_wh: bool = True) -> None:
         self.weights_file = weights_file
         self.providers = ['CPUExecutionProvider']
         if torch.cuda.is_available():
@@ -24,6 +25,7 @@ class HeadDetector(object):
         self.conf_thresh = conf_thresh
         self.nms_thresh = nms_thresh
         self.size_thres = size_thres
+        self.sort_by_wh = sort_by_wh
 
     def __repr__(self) -> str:
         return f'HeadDetector(weights_file={self.weights_file}, input_width={self.input_width}, input_height={self.input_height}, conf_thresh={self.conf_thresh}, nms_thresh={self.nms_thresh}, size_thres={self.size_thres})'
@@ -65,7 +67,10 @@ class HeadDetector(object):
                                          image_data_confs[k]])
         original_hw, image_data_heads_ = image_data.shape[:2], []
         for idx in range(len(image_data_heads)):
-            image_data_heads_.append(self.recover_original_box(image_data_heads[idx], pad_list, original_hw))
+            cur_head_box = self.recover_original_box(image_data_heads[idx], pad_list, original_hw)
+            if self.sort_by_wh:
+                cur_head_box[4] *= cur_head_box[2] * cur_head_box[3]
+            image_data_heads_.append(cur_head_box)
         scaled_boxes = np.apply_along_axis(self.rescale_headbox, 1, image_data_heads_, image_data.shape[1],
                                            image_data.shape[0])
         filtered_boxes = scaled_boxes[(scaled_boxes[:, 3] >= self.size_thres) & (scaled_boxes[:, 2] >= self.size_thres)]

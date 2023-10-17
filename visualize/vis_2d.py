@@ -2,7 +2,7 @@
 Author: chence antonio.chan.cc@outlook.com
 Date: 2023-10-15 17:17:37
 LastEditors: chence antonio.chan.cc@outlook.com
-LastEditTime: 2023-10-15 17:17:56
+LastEditTime: 2023-10-17 14:43:53
 FilePath: /DatProc/visualize/vis_2d.py
 Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 '''
@@ -76,4 +76,36 @@ def show_parsing_result(ori_img, ori_sem, label, show_axis=False):
             all_mask[ori_sem == lb2num[lb], :] = 255
         plt.subplot(n_rows, n_cols, idx+2), plt.title(lb), plt.imshow(cur_mask), plt.axis(axis_str)
     plt.subplot(n_rows, n_cols, len(label)+2), plt.title('all_mask'), plt.imshow(all_mask), plt.axis(axis_str)
+    plt.show()
+
+
+def show_parsing_result_colorized(ori_img, ori_sem, label, show_axis=False):
+    def bgr_color(v):
+        return (np.array(plt.cm.tab20(v)[:3]) * 255).astype(np.uint8)[::-1]
+
+    ul = sorted(np.unique(ori_sem))
+    print(ul)
+    print(ori_sem.dtype, len(ul))
+
+    colorwithlabel = []
+    colorized = np.zeros((ori_sem.shape[0], ori_sem.shape[1], 3), dtype=np.uint8)
+    for c in np.unique(ori_sem):
+        cur_color = bgr_color(c)
+        colorized[ori_sem == c] = cur_color
+        colorvis = np.ones((100, 100, 3), dtype=np.uint8) * cur_color
+        colorvis = cv2.putText(colorvis, f"{c}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0), 2, cv2.LINE_AA)
+        if label is not None:
+            colorvis = cv2.putText(colorvis, f"{label[c]}", (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 0, 0), 2, cv2.LINE_AA)
+        colorwithlabel.append(colorvis)
+    colorwithlabel = np.concatenate(colorwithlabel, axis=1)
+    colorizedimage = (ori_img * 0.5 + colorized * 0.5).astype(np.uint8)
+    concatedimages = np.concatenate([ori_img, colorizedimage, colorized], axis=1)
+    cwl_h, cwl_w = colorwithlabel.shape[:2]
+    cim_h, cim_w = concatedimages.shape[:2]
+    colorwithlabel = cv2.resize(colorwithlabel, (cim_w, cwl_h * cim_w // cwl_w))
+    final_image = np.concatenate([concatedimages, colorwithlabel], axis=0)
+    # show image
+    plt.figure(figsize=(20, 20))
+    plt.imshow(final_image)
+    plt.axis('off' if not show_axis else 'on')
     plt.show()
