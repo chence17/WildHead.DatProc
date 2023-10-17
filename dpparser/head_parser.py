@@ -2,40 +2,20 @@
 Author: chence antonio.chan.cc@outlook.com
 Date: 2023-10-16 10:46:47
 LastEditors: chence antonio.chan.cc@outlook.com
-LastEditTime: 2023-10-16 11:04:16
+LastEditTime: 2023-10-17 16:38:02
 FilePath: /DatProc/paeser/head_parser.py
 Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 '''
 import cv2
 import numpy as np
 import torch
-# import copy
+import copy
 from torchvision.transforms import transforms
-# from skimage import measure
+from skimage import measure
 
 from bisenet.bisenet import load_BiSeNet_model
 from ibug.face_parsing import FaceParser as FaceParserIbug
 from visualize.vis_2d import show_parsing_result
-
-
-# def filter_small_regions(mask, threshold=0.1, kernel_size=(3, 3), close_iterations=5):
-#     if np.sum(mask) == 0:
-#         return copy.deepcopy(mask)
-#     kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, kernel_size)
-#     closed = cv2.morphologyEx(copy.deepcopy(mask), cv2.MORPH_CLOSE, kernel, iterations=close_iterations)
-#     label = measure.label(closed, connectivity=2)
-#     props = measure.regionprops(label)
-#     area_pixels = [p.area for p in props]
-#     area_threshold = np.mean(area_pixels) * threshold
-#     mask_ = np.zeros_like(mask)
-#     for p in props:
-#         if p.area >= area_threshold:
-#             p_mask = (label == p.label).astype(np.uint8) * 255
-#             contours, _ = cv2.findContours(p_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-#             contours = sorted(contours, key=lambda c: cv2.contourArea(c), reverse=True)
-#             p_mask_ = cv2.drawContours(np.zeros_like(p_mask), contours, 0, 255, cv2.FILLED)
-#             mask_[p_mask_ > 0] = 255
-#     return mask_
 
 
 class HeadParser(object):
@@ -59,13 +39,14 @@ class HeadParser(object):
         self.ibug_model_04 = FaceParserIbug(device=self.device, ckpt='assets/ibug/resnet50-deeplabv3plus-14.torch',
                                             encoder='resnet50', decoder='deeplabv3plus', num_classes=14)
         self.label = self.fpp_label
+        self.refine_skip_lbs = ['bg', 'skin', 'eye_g', 'ear_r', 'neck_l']
 
-    def __call__(self, ori_img, is_bgr, show: bool = False) -> np.ndarray:
-        fpp_sem = self.run_fpp(self.fpp_transform, self.fpp_model, ori_img, is_bgr, False)
-        # ibug_sem_01 = self.run_ibug(self.ibug_model_01, ori_img, is_bgr, False)
-        # ibug_sem_02 = self.run_ibug(self.ibug_model_02, ori_img, is_bgr, False)
-        ibug_sem_03 = self.run_ibug(self.ibug_model_03, ori_img, is_bgr, False)
-        ibug_sem_04 = self.run_ibug(self.ibug_model_04, ori_img, is_bgr, False)
+    def __call__(self, ori_img, isBGR, show: bool = False) -> np.ndarray:
+        fpp_sem = self.run_fpp(self.fpp_transform, self.fpp_model, ori_img, isBGR, False)
+        # ibug_sem_01 = self.run_ibug(self.ibug_model_01, ori_img, isBGR, False)
+        # ibug_sem_02 = self.run_ibug(self.ibug_model_02, ori_img, isBGR, False)
+        ibug_sem_03 = self.run_ibug(self.ibug_model_03, ori_img, isBGR, False)
+        ibug_sem_04 = self.run_ibug(self.ibug_model_04, ori_img, isBGR, False)
         lb2num = {lb: num for num, lb in enumerate(self.label)}
         fpp_sem_ = fpp_sem.copy()
         fpp_sem_[fpp_sem == lb2num['hat']] = lb2num['hair']
@@ -80,15 +61,16 @@ class HeadParser(object):
             ibug_sem_04[fpp_sem == lb2num[lb]] = lb2num[lb]
         # sem = vote_sem([fpp_sem, ibug_sem_01, ibug_sem_02, ibug_sem_03, ibug_sem_04])
         sem = self.vote_sem([fpp_sem, ibug_sem_03, ibug_sem_04]).astype(np.uint8)
+        sem = self.refine_semantic(sem, self.label, self.refine_skip_lbs)
         if show:
-            if is_bgr:
+            if isBGR:
                 ori_img = cv2.cvtColor(ori_img, cv2.COLOR_BGR2RGB)
             show_parsing_result(ori_img, sem, self.label)
         return sem
 
     @staticmethod
-    def prepare(ori_img, is_bgr):
-        if is_bgr:
+    def prepare(ori_img, isBGR):
+        if isBGR:
             ori_img = cv2.cvtColor(ori_img, cv2.COLOR_BGR2RGB)
         ori_h, ori_w = ori_img.shape[:2]
         if ori_h == 512 and ori_w == 512:
@@ -109,6 +91,26 @@ class HeadParser(object):
         return ori_sem_
 
     @staticmethod
+    def filter_small_regions(mask, threshold=0.1, kernel_size=(3, 3), close_iterations=5):
+        if np.sum(mask) == 0:
+            return copy.deepcopy(mask)
+        kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, kernel_size)
+        closed = cv2.morphologyEx(copy.deepcopy(mask), cv2.MORPH_CLOSE, kernel, iterations=close_iterations)
+        label = measure.label(closed, connectivity=2)
+        props = measure.regionprops(label)
+        area_pixels = [p.area for p in props]
+        area_threshold = np.mean(area_pixels) * threshold
+        mask_ = np.zeros_like(mask)
+        for p in props:
+            if p.area >= area_threshold:
+                p_mask = (label == p.label).astype(np.uint8) * 255
+                contours, _ = cv2.findContours(p_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+                contours = sorted(contours, key=lambda c: cv2.contourArea(c), reverse=True)
+                p_mask_ = cv2.drawContours(np.zeros_like(p_mask), contours, 0, 255, cv2.FILLED)
+                mask_[p_mask_ > 0] = 255
+        return mask_
+
+    @staticmethod
     def vote_sem(sem_list):
         sem_list_ = [i[..., None] for i in sem_list]
         all_sem = np.concatenate(sem_list_, axis=2)
@@ -118,24 +120,42 @@ class HeadParser(object):
         sem = np.argmax(all_sem_count, axis=2).astype(np.uint8)
         return sem
 
-    def run_fpp(self, fpp_transform, fpp_model, ori_img, is_bgr, show: bool = False) -> np.ndarray:
-        img, ori_h, ori_w, ori_img = self.prepare(ori_img, is_bgr)
+    def refine_semantic(self, ori_sem, label_list, skip_lbs):
+        sem_masks = []
+        for sem_num, sem_lb in enumerate(label_list):
+            sem_mask = ori_sem == sem_num
+            sem_mask = (sem_mask * 255).astype(np.uint8)
+            if sem_lb in skip_lbs:
+                pass
+            else:
+                sem_mask = self.filter_small_regions(sem_mask)
+            sem_masks.append(sem_mask)
+
+        final_mask = np.zeros_like(ori_sem)
+        for sem_num, sem_m in enumerate(sem_masks):
+            final_mask[sem_m != 0] = sem_num
+        return final_mask
+
+    def run_fpp(self, fpp_transform, fpp_model, ori_img, isBGR, show: bool = False) -> np.ndarray:
+        img, ori_h, ori_w, ori_img = self.prepare(ori_img, isBGR)
         img_ts = fpp_transform(img).unsqueeze(0).to(self.device)
         with torch.no_grad():
             sem_ts = fpp_model(img_ts)[0]
         sem = sem_ts.squeeze(0).cpu().numpy().argmax(0).astype(np.uint8)
         ori_sem = cv2.resize(sem, (ori_w, ori_h), interpolation=cv2.INTER_NEAREST)
         ori_sem = self.set_label(ori_sem, self.fpp_label, self.label)
+        ori_sem = self.refine_semantic(ori_sem, self.label, self.refine_skip_lbs)
         if show:
             show_parsing_result(ori_img, ori_sem, self.label)
         return ori_sem
 
-    def run_ibug(self, ibug_model, ori_img, is_bgr, show: bool = False) -> np.ndarray:
-        img, ori_h, ori_w, ori_img = self.prepare(ori_img, is_bgr)
+    def run_ibug(self, ibug_model, ori_img, isBGR, show: bool = False) -> np.ndarray:
+        img, ori_h, ori_w, ori_img = self.prepare(ori_img, isBGR)
         img_bboxes = np.array([[0, 0, 512 - 1, 512 - 1]])
         sem = ibug_model.predict_img(img, img_bboxes, rgb=True)[0].astype(np.uint8)
         ori_sem = cv2.resize(sem, (ori_w, ori_h), interpolation=cv2.INTER_NEAREST)
         ori_sem = self.set_label(ori_sem, self.ibug_label, self.label)
+        ori_sem = self.refine_semantic(ori_sem, self.label, self.refine_skip_lbs)
         if show:
             show_parsing_result(ori_img, ori_sem, self.label)
         return ori_sem
