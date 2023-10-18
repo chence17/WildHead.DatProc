@@ -2,7 +2,7 @@
 Author: chence antonio.chan.cc@outlook.com
 Date: 2023-10-16 13:48:12
 LastEditors: chence antonio.chan.cc@outlook.com
-LastEditTime: 2023-10-17 17:37:15
+LastEditTime: 2023-10-18 11:18:45
 FilePath: /DatProc/tmp.py
 Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 '''
@@ -238,6 +238,36 @@ class DatProcV1(object):
         rotmat = cv2.getRotationMatrix2D(center, angle, 1)
         rot_quad = cv2.transform(quad.reshape(1, -1, 2), rotmat).reshape(-1, 2)
         return rot_quad
+
+    @staticmethod
+    def landmarks_to_bbox(landmarks, margin=0.75):
+        # Find minimum and maximum x and y coordinates
+        min_x = np.min(landmarks[:, 0])
+        max_x = np.max(landmarks[:, 0])
+        min_y = np.min(landmarks[:, 1])
+        max_y = np.max(landmarks[:, 1])
+
+        # Calculate width and height of bounding box
+        width = max_x - min_x
+        height = max_y - min_y
+
+        # Add margin to bounding box
+        x_margin = margin * width
+        y_margin = margin * height
+        min_x -= x_margin
+        max_x += x_margin
+        min_y -= 1.5 * y_margin
+        max_y += 0.5 * y_margin
+
+        # bounding box coordinates
+        min_x, min_y, max_x, max_y = int(min_x), int(min_y), int(max_x), int(max_y)
+        cx, cy = (min_x + max_x) / 2., (min_y + max_y) / 2.
+        width = max(max_x - min_x, max_y - min_y)
+        height = width
+        min_x, min_y = int(cx - width / 2.), int(cy - height / 2.)
+
+        # Return bounding box coordinates
+        return np.array([min_x, min_y, width, height])
 
     def hpose2camera(self, hpose):
         R = self.hpose2R(hpose)
