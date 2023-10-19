@@ -2,7 +2,7 @@
 Author: chence antonio.chan.cc@outlook.com
 Date: 2023-10-19 11:44:30
 LastEditors: chence antonio.chan.cc@outlook.com
-LastEditTime: 2023-10-19 14:57:58
+LastEditTime: 2023-10-19 16:23:43
 FilePath: /DatProc/RunSegSingle.py
 Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 '''
@@ -10,6 +10,7 @@ import os
 import cv2
 import tqdm
 import torch
+import argparse
 import numpy as np
 from PIL import Image
 from torchvision.transforms import ToPILImage
@@ -26,16 +27,7 @@ def get_mask(model, batch, cid):
     normalized_batch = transforms.functional.normalize(
         batch, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
     output = model(normalized_batch)['out']
-    # sem_classes = [
-    #     '__background__', 'aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus',
-    #     'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse', 'motorbike',
-    #     'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor'
-    # ]
-    # sem_class_to_idx = {cls: idx for (idx, cls) in enumerate(sem_classes)}
-    # cid = sem_class_to_idx['car']
-
     normalized_masks = torch.nn.functional.softmax(output, dim=1)
-
     boolean_car_masks = (normalized_masks.argmax(1) == cid)
     return boolean_car_masks.float()
 
@@ -44,19 +36,36 @@ preprocess = transforms.Compose([
     transforms.ToTensor()
 ])
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--input_path', type=str)
+    parser.add_argument('-o', '--output_path', type=str)
+    parser.add_argument('-b', '--batch_size', type=int, default=32)
+    return parser.parse_args()
+
+
+def find_images(root_dir:str)-> list:
+    image_extensions = ['.jpg', '.jpeg', '.png', '.bmp', '.gif']
+    image_paths = []
+    for dirpath, dirnames, filenames in os.walk(root_dir):
+        for filename in filenames:
+            if os.path.splitext(filename)[-1].lower() in image_extensions:
+                image_paths.append(os.path.relpath(os.path.join(dirpath, filename), root_dir))
+    return image_paths
+
+args = parse_args()
 # load segmentation net
 seg_net = deeplabv3_resnet101(pretrained=True, progress=False).to('cuda:0')
 seg_net.requires_grad_(False)
 seg_net.eval()
 
 # multiple script
-image_dir = '/home/chence/Research/3DHeadGen/DatProc/temp/00000'
-mask_dir = '/home/chence/Research/3DHeadGen/DatProc/temp/00000_mask'
-image_names = [x for x in os.listdir(image_dir)]
+image_dir = args.input_path
+mask_dir = args.output_path
+os.makedirs(mask_dir, exist_ok=True)
+
+image_names = find_images(image_dir)
 image_name_batches = batchify(image_names, batch_size=BATCH_SIZE)
-original_image_shape = (563, 563)
-
-
 
 for batch_name in tqdm.tqdm(image_name_batches):
     batch_tensors = []
@@ -72,24 +81,9 @@ for batch_name in tqdm.tqdm(image_name_batches):
     batch_masks = torch.unbind(batch_masks, dim=0)
     for image_name, mask_tensor in zip(batch_name, batch_masks):
         # save mask
+        subdir = os.path.dirname(image_name)
+        os.makedirs(os.path.join(mask_dir, subdir), exist_ok=True)
         mask_image = ToPILImage()(mask_tensor)
-        mask_image = cv2.resize(np.array(mask_image), (original_image_shape[1], original_image_shape[0]), interpolation=cv2.INTER_NEAREST)
+        mask_image = cv2.resize(np.array(mask_image), (image_data.size), interpolation=cv2.INTER_NEAREST)
         cv2.imwrite(os.path.join(mask_dir, image_name), mask_image)
 
-
-# image = Image.open('/home/chence/Research/3DHeadGen/DatProc/temp/00000/img00000000.png')
-# # Define the preprocessing transformation
-# # Apply the transformation to the image
-# input_tensor = preprocess(image)
-# input_batch = input_tensor.unsqueeze(0).to('cuda:0')
-
-
-# # 15 means human mask
-# mask0 = get_mask(seg_net, input_batch, 15).unsqueeze(1)
-
-# # Squeeze the tensor to remove unnecessary dimensions and convert to PIL Image
-# mask_squeezed = torch.squeeze(mask0)
-# mask_image = ToPILImage()(mask_squeezed)
-
-# # Save as PNG
-# mask_image.save("mask.png")
