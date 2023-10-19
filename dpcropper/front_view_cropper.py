@@ -96,9 +96,9 @@ class FrontViewCropper(object):
         camera_poses = self.eg3dcamparams(P.flatten())
 
         # Save cropped images
-        cropped_img, quad, tf_quad = self.crop_final(image_data, size=self.size, quad=quad)
+        cropped_img, quad, tf_quad, none_padding_ratio = self.crop_final(image_data, size=self.size, quad=quad)
 
-        return cropped_img, camera_poses, quad, tf_quad
+        return cropped_img, camera_poses, quad, tf_quad, none_padding_ratio
 
     @staticmethod
     def get_crop_bound(lm, method="ffhq"):
@@ -238,6 +238,7 @@ class FrontViewCropper(object):
 
         empty = np.ones_like(img) * 255
         crop_mask = cv2.warpAffine(empty, mat, crop_size)
+        none_padding_ratio = np.sum(crop_mask == 255) / crop_mask.size
 
         mask_kernel = int(size*0.02)*2+1
         blur_kernel = int(size*0.03)*2+1 if blur_kernel is None else blur_kernel
@@ -249,5 +250,52 @@ class FrontViewCropper(object):
             blurred_img = cv2.blur(crop_img, (blur_kernel, blur_kernel), 0)
             crop_img = crop_img * blur_mask + blurred_img * (1 - blur_mask)
             crop_img = crop_img.astype(np.uint8)
+
+        return crop_img, orig_quad, tf_quad, none_padding_ratio
+
+    @staticmethod
+    def crop_final_parsing(
+        img,
+        size=512,
+        quad=None,
+        top_expand=0.1,
+        left_expand=0.05,
+        bottom_expand=0.0,
+        right_expand=0.05,
+        upsample=2,
+        min_size=256,
+        bg_value=0
+    ):
+        orig_size = min(np.linalg.norm(quad[1] - quad[0]), np.linalg.norm(quad[2] - quad[1]))
+        if min_size is not None and orig_size < min_size:
+            raise ValueError(f"min_size is {min_size} and orig_size is {orig_size}.")
+
+        crop_w = int(size * (1 + left_expand + right_expand))
+        crop_h = int(size * (1 + top_expand + bottom_expand))
+        crop_size = (crop_w, crop_h)
+
+        top = int(size * top_expand)
+        left = int(size * left_expand)
+        size -= 1
+        bound = np.array([[left, top], [left, top + size], [left + size, top + size], [left + size, top]],
+                            dtype=np.float32)
+        tf_quad = np.array([[0, 0], [0, crop_h-1], [crop_w-1, crop_h-1], [crop_w-1, 0]], dtype=np.float32)
+
+        mat = cv2.getAffineTransform(quad[:3], bound[:3])
+
+        # Calculate the inverse of the affine transformation matrix
+        invmat = cv2.invertAffineTransform(mat)
+        # Apply the inverse transformation matrix to the transformed points
+        orig_quad = cv2.transform(tf_quad.reshape(1, -1, 2), invmat).reshape(-1, 2)
+
+        if upsample is None or upsample == 1:
+            crop_img = cv2.warpAffine(np.array(img), mat, crop_size, flags=cv2.INTER_NEAREST,
+                                    borderMode=cv2.BORDER_CONSTANT, borderValue=bg_value)
+        else:
+            assert isinstance(upsample, int)
+            crop_size_large = (crop_w*upsample, crop_h*upsample)
+            crop_img = cv2.warpAffine(np.array(img), upsample*mat, crop_size_large, flags=cv2.INTER_NEAREST,
+                                    borderMode=cv2.BORDER_CONSTANT, borderValue=bg_value)
+            crop_img = cv2.resize(crop_img, crop_size, interpolation=cv2.INTER_NEAREST)
 
         return crop_img, orig_quad, tf_quad
