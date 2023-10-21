@@ -45,7 +45,7 @@ def parse_args():
     parser.add_argument('-i', '--input', help='path to json file.', type=str)
     parser.add_argument('-o', '--output', help='path to copy clear images.', type=str, default='/data2/tianhao/DAD_clear_new')
     parser.add_argument('--lap_threshold', help='threshold for laplacian blur detection.', type=int, default=50) # 50
-    parser.add_argument('--svd_threshold', help='threshold for SVD blur detection.', type=int, default=0.6) # 0.75
+    parser.add_argument('--svd_threshold', help='threshold for SVD blur detection.', type=int, default=0.75) # 0.75
     parser.add_argument('--force', help='force to overwrite existing files.', action='store_true')
     return parser.parse_args()
 
@@ -101,6 +101,7 @@ for key, value in tqdm.tqdm(image_meta.items()):
         laplacian_blur += 1
     if value['svd_score'] > args.svd_threshold and value['laplacian_score'] < args.lap_threshold:
         both += 1
+        blur_image_meta[key] = value
     if value['svd_score'] < args.svd_threshold and value['laplacian_score'] > args.lap_threshold:
         no += 1
     # else:
@@ -118,5 +119,5 @@ results = {
 print(f'Total: {len(image_meta)}')
 for key, value in results.items():
     print(f'{key}: {value}')        
-# with open(blur_image_out_name, 'w') as f:
-#     json.dump(blur_image_meta, f)
+with open(blur_image_out_name, 'w') as f:
+    json.dump(blur_image_meta, f)

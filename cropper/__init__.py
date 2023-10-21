@@ -1,1 +1,0 @@
-from .front_view_cropper import FrontViewCropper
