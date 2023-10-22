@@ -9,7 +9,9 @@ sources
 temp
 temp*
 .history
+.vscode
 assets
+# *.cpp
 
 # Weights
 *.pth

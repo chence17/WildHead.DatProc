@@ -2,7 +2,7 @@
 Author: chence antonio.chan.cc@outlook.com
 Date: 2023-09-17 14:44:45
 LastEditors: chence antonio.chan.cc@outlook.com
-LastEditTime: 2023-09-30 17:14:39
+LastEditTime: 2023-10-15 16:59:37
 FilePath: /DatProc/01.filter_images.py
 Description: 01.filter_images.py
 '''
@@ -14,7 +14,8 @@ from tqdm import tqdm
 from multiprocessing import Pool
 
 from utils.filter import load_image_names, filter_invalid_and_small
-from utils.head_detection import YoloHeadDetector
+# from utils.head_detection import YoloHeadDetector
+from detector import HeadDetector
 from utils.tool import partition_dict
 
 
@@ -38,7 +39,7 @@ def parse_args():
 def main(args):
     print(args)
     # initialize detectors
-    hbox_det = YoloHeadDetector(weights_file='assets/224x224_yolov4_hddet_480x640.onnx',
+    hbox_det = HeadDetector(weights_file='assets/224x224_yolov4_hddet_480x640.onnx',
                                 input_width=640, input_height=480)
 
     # load image folder and save folder
