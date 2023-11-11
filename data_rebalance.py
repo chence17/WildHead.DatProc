@@ -1,3 +1,13 @@
+'''
+Author: tianhao 120090472@link.cuhk.edu.cn
+Date: 2023-11-11 14:22:01
+LastEditors: tianhao 120090472@link.cuhk.edu.cn
+LastEditTime: 2023-11-11 14:22:18
+FilePath: /DatProc/data_rebalance.py
+Description: 
+
+Copyright (c) 2023 by ${git_name_email}, All Rights Reserved. 
+'''
 import os
 import json
 import tqdm
