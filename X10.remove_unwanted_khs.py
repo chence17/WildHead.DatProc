@@ -5,7 +5,7 @@ LastEditors: tianhao 120090472@link.cuhk.edu.cn
 LastEditTime: 2023-11-14 14:16:27
 FilePath: /DatProc/X10.remove_unwanted_khs.py
 Description: 
-
+    Remov unwanted items in K-Hairstyle
 Copyright (c) 2023 by ${git_name_email}, All Rights Reserved. 
 '''
 # read dataset.json
@@ -13,6 +13,7 @@ import json, os, tqdm
 
 ours_delete = []
 khs_delete = []
+khs_keep = []
 label_root_dir = '/data3/khs_labels/'
 dataset_json_path = '/data2/chence/PanoHeadData/multi_view_hq/dataset.json'
 suspected_samples = [
@@ -56,13 +57,26 @@ for image_name, image_meta in pbar:
         exceptional = label['exceptional']
         if exceptional in suspected_samples:
             khs_delete.append(new_path)
+        else:
+            khs_keep.append(new_path)
     pbar.update()
 
 print(f'In total: {len(khs_delete)} in K-Hairstyle will be deleted.')
 print(f'In total: {len(ours_delete)} in OCD will be deleted.')
 
-model_ids = set()
+bad_model_ids = set()
+good_model_ids = set()
+test_model_nums = 100
 for _path in khs_delete:
     model_id = os.path.basename(os.path.dirname(_path))
-    model_ids.add(model_id) 
-print(f'In total: {len(model_ids)} models will be deleted.')
+    bad_model_ids.add(model_id) 
+    if len(bad_model_ids) >= test_model_nums:
+        break
+for _path in khs_keep:
+    model_id = os.path.basename(os.path.dirname(_path))
+    good_model_ids.add(model_id)
+    if len(good_model_ids) >= test_model_nums:
+        break
+
+    
+outdir = '/home/shitianhao/project/DatProc/temp/test_model_ids'
