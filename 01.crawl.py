@@ -1,9 +1,9 @@
 '''
 Author: chence antonio.chan.cc@outlook.com
 Date: 2023-06-08 10:15:03
-LastEditors: chence antonio.chan.cc@outlook.com
-LastEditTime: 2023-10-18 18:11:59
-FilePath: /HoloHead/dataprocess/Web/01.crawl.py
+LastEditors: tianhao 120090472@link.cuhk.edu.cn
+LastEditTime: 2024-02-25 19:48:36
+FilePath: /DatProc/01.crawl.py
 Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 '''
 import os.path as osp

@@ -1,9 +1,9 @@
 '''
 Author: chence antonio.chan.cc@outlook.com
 Date: 2023-10-16 13:48:12
-LastEditors: chence antonio.chan.cc@outlook.com
-LastEditTime: 2023-10-18 20:05:54
-FilePath: /DatProc/tmp.py
+LastEditors: tianhao 120090472@link.cuhk.edu.cn
+LastEditTime: 2024-01-26 14:27:00
+FilePath: /DatProc/dpmain/datproc_v1.py
 Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 '''
 import numpy as np
@@ -16,7 +16,7 @@ from skimage import io
 from dpfilter import ImageSizeFilter, ImageBlurFilter
 from dpdetector import HeadDetector, FaceAlignmentDetector
 from dpcropper import FrontViewCropper
-from dpparser import HeadParser, HeadSegmenter
+# from dpparser import HeadParser, HeadSegmenter
 from dpestimator import HeadPoseEstimator
 
 
@@ -28,8 +28,8 @@ class DatProcV1(object):
                                     input_height=480, size_thres=512)
         self.flmk_det = FaceAlignmentDetector(score_thres=0.8)
         self.fv_crpr = FrontViewCropper(config_file='TDDFA_V2/configs/mb1_120x120.yml', mode='gpu')
-        self.hed_par = HeadParser()
-        self.hed_seg = HeadSegmenter(use_fsam=True)
+        # self.hed_par = HeadParser()
+        # self.hed_seg = HeadSegmenter(use_fsam=True)
         self.hed_pe = HeadPoseEstimator(weights_file='assets/whenet_1x3x224x224_prepost.onnx')
 
         # inverse convert from OpenCV camera
@@ -55,9 +55,9 @@ class DatProcV1(object):
         if not osp.exists(img_path):
             raise ValueError('Image path does not exist')
 
-        # Check if image is too small
-        if not self.img_sz_flt(img_path):
-            raise ValueError('Image size too small')
+        # # Check if image is too small
+        # if not self.img_sz_flt(img_path):
+        #     raise ValueError('Image size too small')
 
         # Load image data
         img_data = io.imread(img_path)  # RGB uint8 HW3 ndarray
@@ -120,8 +120,8 @@ class DatProcV1(object):
         info_dict['head']['svd_score'] = svd_score  # SVD score for blur detection
         info_dict['head']['laplacian_score'] = lap_score  # Laplacian score for blur detection
 
-        info_dict['head']['par_ratio'] = np.sum(cropped_img_par != 0)/cropped_img_par.size  # Valid Area / Image Size. Valid Area: area of non-void head parsing pixels in the image which is not background in the parsing.
-        info_dict['head']['msk_ratio'] = np.sum(cropped_img_msk != 0)/cropped_img_msk.size  # Valid Area / Image Size. Valid Area: area of non-void head parsing pixels in the image which is not background in the parsing.
+        info_dict['head']['par_ratio'] = None#np.sum(cropped_img_par != 0)/cropped_img_par.size  # Valid Area / Image Size. Valid Area: area of non-void head parsing pixels in the image which is not background in the parsing.
+        info_dict['head']['msk_ratio'] = None#np.sum(cropped_img_msk != 0)/cropped_img_msk.size  # Valid Area / Image Size. Valid Area: area of non-void head parsing pixels in the image which is not background in the parsing.
 
         return info_dict, head_image, head_image_par, head_image_msk, cropped_img, cropped_img_par, cropped_img_msk
 
@@ -570,13 +570,13 @@ class DatProcV1(object):
         # Generate results
         head_image, head_crop_box, head_rot_quad, head_image_par, head_image_msk = self.generate_results(rotated_image, rot_quad, box_np, self.head_image_size, rotated_image_par, rotated_image_msk)
         if head_image_par is None:
-            head_image_par = self.hed_par(head_image, isBGR=False, show=False)
+            head_image_par = None#self.hed_par(head_image, isBGR=False, show=False)
         if head_image_msk is None:
-            head_image_msk = self.hed_seg(head_image, isBGR=False, show=False)
-        cropped_img_par = self.crop_head_parsing(head_image_par.copy(), head_crop_box)
-        cropped_img_par = cv2.resize(cropped_img_par, (cropped_img.shape[1], cropped_img.shape[0]), interpolation=cv2.INTER_NEAREST)
-        cropped_img_msk = self.crop_head_parsing(head_image_msk.copy(), head_crop_box)
-        cropped_img_msk = cv2.resize(cropped_img_msk, (cropped_img.shape[1], cropped_img.shape[0]), interpolation=cv2.INTER_NEAREST)
+            head_image_msk = None#self.hed_seg(head_image, isBGR=False, show=False)
+        cropped_img_par = None#self.crop_head_parsing(head_image_par.copy(), head_crop_box)
+        cropped_img_par = None#cv2.resize(cropped_img_par, (cropped_img.shape[1], cropped_img.shape[0]), interpolation=cv2.INTER_NEAREST)
+        cropped_img_msk = None#self.crop_head_parsing(head_image_msk.copy(), head_crop_box)
+        cropped_img_msk = None#cv2.resize(cropped_img_msk, (cropped_img.shape[1], cropped_img.shape[0]), interpolation=cv2.INTER_NEAREST)
 
         # Process results
         info_dict = {
