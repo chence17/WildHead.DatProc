@@ -2,7 +2,7 @@
 Author: chence antonio.chan.cc@outlook.com
 Date: 2023-10-16 13:48:12
 LastEditors: tianhao 120090472@link.cuhk.edu.cn
-LastEditTime: 2024-01-26 14:27:00
+LastEditTime: 2024-02-26 10:55:03
 FilePath: /DatProc/dpmain/datproc_v1.py
 Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 '''
@@ -56,8 +56,8 @@ class DatProcV1(object):
             raise ValueError('Image path does not exist')
 
         # # Check if image is too small
-        # if not self.img_sz_flt(img_path):
-        #     raise ValueError('Image size too small')
+        if not self.img_sz_flt(img_path):
+            raise ValueError('Image size too small')
 
         # Load image data
         img_data = io.imread(img_path)  # RGB uint8 HW3 ndarray
@@ -65,7 +65,7 @@ class DatProcV1(object):
         # Get head box and landmarks
         if landmarks is None:
             # Detect head box
-            hed_boxes = self.hed_det(img_data, isBGR=False, max_box_num=1)
+            hed_boxes = self.hed_det(img_data, isBGR=False, max_box_num=1) # N * 4 np.ndarray, each box is [x_min, y_min, w, h].
             if hed_boxes is None or hed_boxes.shape[0] == 0:
                 raise ValueError('No head detected')
             box_np = np.array(hed_boxes[0])  # Coords in Raw Image
