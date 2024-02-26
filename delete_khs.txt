@@ -1,5 +1,0 @@
-Loading present dataset meta from: /data2/chence/PanoHeadData/multi_view_hq/dataset.json...Done.
-Filtering KHS data...
-In total: 14494 in K-Hairstyle will be deleted.
-In total: 24510 in OCD will be deleted.
-In total: 1038 models will be deleted.
