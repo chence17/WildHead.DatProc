@@ -2,7 +2,7 @@
 Author: tianhao 120090472@link.cuhk.edu.cn
 Date: 2023-11-11 14:22:01
 LastEditors: tianhao 120090472@link.cuhk.edu.cn
-LastEditTime: 2023-11-15 03:22:56
+LastEditTime: 2024-02-28 09:47:28
 FilePath: /DatProc/data_rebalance.py
 Description: 
 
@@ -16,11 +16,15 @@ import numpy as np
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Rebalance dataset')
-    parser.add_argument('-i', '--input_path', type=str, help='path to json metafile', default='/data2/chence/PanoHeadData/single_view_hq/dataset_v2.json')
-    parser.add_argument('-d', '--dict_file', type=str, default='/home/shitianhao/project/DatProc/temp/dup_per_deg_v2.json')
-    parser.add_argument('-o', '--output_path', type=str, help='path to save rebalanced dataset', default='/data2/chence/PanoHeadData/single_view_hq/dataset_v2_balanced.json')
+    parser.add_argument('-i', '--input_path', type=str, help='path to json metafile', default='/data2/PanoHeadData/single_view_hq/dataset_v3.json')
+    parser.add_argument('-d', '--dict_file', type=str, default='/home/shitianhao/project/DatProc/temp/dup_per_deg_v3.json')
+    parser.add_argument('-o', '--output_path', type=str, help='path to save rebalanced dataset', default='/data2/PanoHeadData/single_view_hq/dataset_v3_balanced.json')
     parser.add_argument('-n', '--num_worker', type=int, help='number of workers', default=64)
     return parser.parse_args()
+
+def find_closest_group(deg):
+    return deg - deg % 5
+
 
 def main(args):
 
@@ -38,8 +42,14 @@ def main(args):
     during_num = 0
     for image_name in tqdm.tqdm(dataset.keys()):
         camera_scoord = dataset[image_name]['camera_scoord']
-        theta = int(camera_scoord[0])
-        dup_num = dup_per_deg[str(theta)]
+        theta = round(camera_scoord[0])
+        try:
+            group_theta = find_closest_group(theta)
+            if group_theta == -180:
+                group_theta = 180
+            dup_num = dup_per_deg[str(group_theta)]
+        except:
+            print(theta)
         during_num += dup_num
         dataset[image_name]['dup_num'] = dup_num
     print(f'During modify: Total number of images: {len(dataset)}, Total number of images considering duplicate: {during_num}')
