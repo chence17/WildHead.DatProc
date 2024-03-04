@@ -2,6 +2,9 @@
 import cv2
 import yaml
 import numpy as np
+import sys
+
+print(sys.path)
 
 from TDDFA_V2.FaceBoxes import FaceBoxes
 from TDDFA_V2.TDDFA import TDDFA

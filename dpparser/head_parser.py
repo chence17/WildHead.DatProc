@@ -2,7 +2,7 @@
 Author: chence antonio.chan.cc@outlook.com
 Date: 2023-10-16 10:46:47
 LastEditors: chence antonio.chan.cc@outlook.com
-LastEditTime: 2023-10-17 16:38:02
+LastEditTime: 2023-10-21 10:54:14
 FilePath: /DatProc/paeser/head_parser.py
 Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 '''
