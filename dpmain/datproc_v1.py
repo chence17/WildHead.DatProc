@@ -2,7 +2,7 @@
 Author: chence antonio.chan.cc@outlook.com
 Date: 2023-10-16 13:48:12
 LastEditors: chence antonio.chan.cc@outlook.com
-LastEditTime: 2024-02-28 20:13:17
+LastEditTime: 2024-02-28 23:49:01
 FilePath: /DatProc/dpmain/datproc_v1.py
 Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 '''
@@ -29,8 +29,8 @@ class DatProcV1(object):
         self.flmk_det = FaceAlignmentDetector(score_thres=0.8)
         self.fv_crpr = FrontViewCropper(config_file='TDDFA_V2/configs/mb1_120x120.yml', mode='gpu')
         self.hed_par = HeadParser()
-        # self.hed_seg = HeadSegmenter(use_fsam=True)
-        self.hed_seg = HeadSegmenter(use_fsam=False)
+        self.hed_seg = HeadSegmenter(use_fsam=True)
+        # self.hed_seg = HeadSegmenter(use_fsam=False)
         self.hed_pe = HeadPoseEstimator(weights_file='assets/whenet_1x3x224x224_prepost.onnx')
 
         # inverse convert from OpenCV camera
@@ -98,6 +98,7 @@ class DatProcV1(object):
 
         info_dict['data_source'] = self.data_source  # data source
         info_dict['raw']['image'] = osp.basename(img_path)  # raw image name
+        info_dict['raw']['box'] = box_np.tolist()  # [x_min, y_min, w, h]
 
         cur_cam = info_dict['head']['camera']
         cur_TMatrix = np.array(cur_cam[:16]).reshape(4, 4)
@@ -121,8 +122,8 @@ class DatProcV1(object):
         info_dict['head']['svd_score'] = svd_score  # SVD score for blur detection
         info_dict['head']['laplacian_score'] = lap_score  # Laplacian score for blur detection
 
-        info_dict['head']['par_ratio'] = None#np.sum(cropped_img_par != 0)/cropped_img_par.size  # Valid Area / Image Size. Valid Area: area of non-void head parsing pixels in the image which is not background in the parsing.
-        info_dict['head']['msk_ratio'] = None#np.sum(cropped_img_msk != 0)/cropped_img_msk.size  # Valid Area / Image Size. Valid Area: area of non-void head parsing pixels in the image which is not background in the parsing.
+        info_dict['head']['par_ratio'] = np.sum(cropped_img_par != 0)/cropped_img_par.size  # Valid Area / Image Size. Valid Area: area of non-void head parsing pixels in the image which is not background in the parsing.
+        info_dict['head']['msk_ratio'] = np.sum(cropped_img_msk != 0)/cropped_img_msk.size  # Valid Area / Image Size. Valid Area: area of non-void head parsing pixels in the image which is not background in the parsing.
 
         return info_dict, head_image, head_image_par, head_image_msk, cropped_img, cropped_img_par, cropped_img_msk
 
