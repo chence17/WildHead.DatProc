@@ -85,5 +85,9 @@ for batch_name in tqdm.tqdm(image_name_batches):
         os.makedirs(os.path.join(mask_dir, subdir), exist_ok=True)
         mask_image = ToPILImage()(mask_tensor)
         mask_image = cv2.resize(np.array(mask_image), (image_data.size), interpolation=cv2.INTER_NEAREST)
-        cv2.imwrite(os.path.join(mask_dir, image_name), mask_image)
+        if image_name.endswith('.png'):
+            mask_name = image_name
+        else:
+            mask_name = os.path.splitext(image_name)[0] + '.png'
+        cv2.imwrite(os.path.join(mask_dir, mask_name), mask_image)
 
