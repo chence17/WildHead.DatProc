@@ -221,13 +221,13 @@ class DatProcV3(object):
         crop_img = image_data[y_min:y_max, x_min:x_max]
         # print(crop_img.shape)
         crop_msk = np.zeros_like(crop_img)  # 0: Not padding, 255: Padding
-        print(crop_msk.shape, crop_msk[0, 0])
+        # print(crop_msk.shape, crop_msk[0, 0])
         if top_size + bottom_size + left_size + right_size != 0:
             crop_img = cv2.copyMakeBorder(crop_img, top_size, bottom_size, left_size, right_size,
                                           borderType=cv2.BORDER_CONSTANT, value=(bg_value, bg_value, bg_value))
             crop_msk = cv2.copyMakeBorder(crop_msk, top_size, bottom_size, left_size, right_size,
                                           borderType=cv2.BORDER_CONSTANT, value=(255, 255, 255))  # 0: Not padding, 255: Padding
-            print(crop_msk.shape, crop_msk[0, 0])
+            # print(crop_msk.shape, crop_msk[0, 0])
         # print(crop_img.shape, (h, w))
         assert crop_img.shape[0] == h
         assert crop_img.shape[1] == w

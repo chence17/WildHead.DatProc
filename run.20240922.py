@@ -66,90 +66,95 @@ if __name__ == "__main__":
     save_root_dir = args.save_root_dir
 
     pos1_list, cur_start_index = partition_list(img_file_paths, args.split_index, args.total_splits)
+    # print(f"==>> pos1_list: {pos1_list}")
+    print(f"==>> cur_start_index: {cur_start_index}")
 
-    # info_dict_save_dir = osp.join(save_root_dir, "info_dict")
-    # status_save_dir = osp.join(save_root_dir, "status")
-    # head_image_save_dir = osp.join(save_root_dir, "image1024")
-    # head_image_par_save_dir = osp.join(save_root_dir, "image1024_head_parsing")
-    # head_image_msk_save_dir = osp.join(save_root_dir, "image1024_head_mask")
-    # head_pad_mask_save_dir = osp.join(save_root_dir, "image1024_padding_mask")
-    # cropped_img_save_dir = osp.join(save_root_dir, "image563")
-    # cropped_img_par_save_dir = osp.join(save_root_dir, "image563_head_parsing")
-    # cropped_img_msk_save_dir = osp.join(save_root_dir, "image563_head_mask")
-    # cropped_pad_mask_save_dir = osp.join(save_root_dir, "image563_padding_mask")
+    info_dict_save_dir = osp.join(save_root_dir, "info_dict")
+    status_save_dir = osp.join(save_root_dir, "status")
+    head_image_save_dir = osp.join(save_root_dir, "image1024")
+    head_image_par_save_dir = osp.join(save_root_dir, "image1024_head_parsing")
+    head_image_msk_save_dir = osp.join(save_root_dir, "image1024_head_mask")
+    head_pad_mask_save_dir = osp.join(save_root_dir, "image1024_padding_mask")
+    cropped_img_save_dir = osp.join(save_root_dir, "image563")
+    cropped_img_par_save_dir = osp.join(save_root_dir, "image563_head_parsing")
+    cropped_img_msk_save_dir = osp.join(save_root_dir, "image563_head_mask")
+    cropped_pad_mask_save_dir = osp.join(save_root_dir, "image563_padding_mask")
 
-    # for i in [info_dict_save_dir, status_save_dir, head_image_save_dir, head_image_par_save_dir, head_image_msk_save_dir, head_pad_mask_save_dir, cropped_img_save_dir, cropped_img_par_save_dir, cropped_img_msk_save_dir, cropped_pad_mask_save_dir]:
-    #     os.makedirs(i, exist_ok=True)
+    for i in [info_dict_save_dir, status_save_dir, head_image_save_dir, head_image_par_save_dir, head_image_msk_save_dir, head_pad_mask_save_dir, cropped_img_save_dir, cropped_img_par_save_dir, cropped_img_msk_save_dir, cropped_pad_mask_save_dir]:
+        os.makedirs(i, exist_ok=True)
 
-    # for idx, pos1 in enumerate(pos1_list):
-    #     try:
-    #         img_name = osp.basename(pos1)
-    #         img_name = img_name.split(".")[0]
-    #         img_name = f"{cur_start_index:07d}_{img_name}"
-    #         status_save_path = osp.join(status_save_dir, f"{img_name}.txt")
+    idx = cur_start_index
+    for pos1 in tqdm.tqdm(pos1_list):
+        try:
+            img_name = osp.basename(pos1)
+            img_name = img_name.split(".")[0]
+            img_name = f"{idx:07d}_{img_name}"
+            status_save_path = osp.join(status_save_dir, f"{img_name}.txt")
 
-    #         if osp.exists(status_save_path):
-    #             continue
+            if osp.exists(status_save_path):
+                continue
 
-    #         img_path = pos1
-    #         assert osp.exists(img_path), f"Image file not found: {img_path}"
+            img_path = pos1
+            assert osp.exists(img_path), f"Image file not found: {img_path}"
 
-    #         proc_results = dp(img_path, use_landmarks=False)
-    #         for procidx in range(len(proc_results)):
-    #             proc_dict = proc_results[procidx]
-    #             info_dict = proc_dict['info_dict']
-    #             head_image = proc_dict['head_image']
-    #             head_image_par = proc_dict['head_image_par']
-    #             head_image_msk = proc_dict['head_image_msk']
-    #             head_pad_mask = proc_dict['head_pad_mask']
-    #             cropped_img = proc_dict['cropped_img']
-    #             cropped_img_par = proc_dict['cropped_img_par']
-    #             cropped_img_msk = proc_dict['cropped_img_msk']
-    #             cropped_pad_mask = proc_dict['cropped_pad_mask']
+            proc_results = dp(img_path, use_landmarks=False)
+            for procidx in range(len(proc_results)):
+                proc_dict = proc_results[procidx]
+                info_dict = proc_dict['info_dict']
+                head_image = proc_dict['head_image']
+                head_image_par = proc_dict['head_image_par']
+                head_image_msk = proc_dict['head_image_msk']
+                head_pad_mask = proc_dict['head_pad_mask']
+                cropped_img = proc_dict['cropped_img']
+                cropped_img_par = proc_dict['cropped_img_par']
+                cropped_img_msk = proc_dict['cropped_img_msk']
+                cropped_pad_mask = proc_dict['cropped_pad_mask']
 
-    #             info_dict['raw_image_path'] = img_path
+                info_dict['raw_image_path'] = img_path
 
-    #             head_image_save_path = osp.join(
-    #                 head_image_save_dir, f"{img_name}_{procidx:02d}.jpg")
-    #             head_image_par_save_path = osp.join(
-    #                 head_image_par_save_dir, f"{img_name}_{procidx:02d}.png")
-    #             head_image_msk_save_path = osp.join(
-    #                 head_image_msk_save_dir, f"{img_name}_{procidx:02d}.png")
-    #             head_pad_mask_save_path = osp.join(
-    #                 head_pad_mask_save_dir, f"{img_name}_{procidx:02d}.png")
-    #             cropped_img_save_path = osp.join(
-    #                 cropped_img_save_dir, f"{img_name}_{procidx:02d}.jpg")
-    #             cropped_img_par_save_path = osp.join(
-    #                 cropped_img_par_save_dir, f"{img_name}_{procidx:02d}.png")
-    #             cropped_img_msk_save_path = osp.join(
-    #                 cropped_img_msk_save_dir, f"{img_name}_{procidx:02d}.png")
-    #             cropped_pad_mask_save_path = osp.join(
-    #                 cropped_pad_mask_save_dir, f"{img_name}_{procidx:02d}.png")
+                head_image_save_path = osp.join(
+                    head_image_save_dir, f"{img_name}_{procidx:02d}.jpg")
+                head_image_par_save_path = osp.join(
+                    head_image_par_save_dir, f"{img_name}_{procidx:02d}.png")
+                head_image_msk_save_path = osp.join(
+                    head_image_msk_save_dir, f"{img_name}_{procidx:02d}.png")
+                head_pad_mask_save_path = osp.join(
+                    head_pad_mask_save_dir, f"{img_name}_{procidx:02d}.png")
+                cropped_img_save_path = osp.join(
+                    cropped_img_save_dir, f"{img_name}_{procidx:02d}.jpg")
+                cropped_img_par_save_path = osp.join(
+                    cropped_img_par_save_dir, f"{img_name}_{procidx:02d}.png")
+                cropped_img_msk_save_path = osp.join(
+                    cropped_img_msk_save_dir, f"{img_name}_{procidx:02d}.png")
+                cropped_pad_mask_save_path = osp.join(
+                    cropped_pad_mask_save_dir, f"{img_name}_{procidx:02d}.png")
 
-    #             with open(osp.join(info_dict_save_dir, f"{img_name}_{procidx:02d}.json"), "w") as f:
-    #                 json.dump(info_dict, f)
+                with open(osp.join(info_dict_save_dir, f"{img_name}_{procidx:02d}.json"), "w") as f:
+                    json.dump(info_dict, f)
 
-    #             Image.fromarray(head_image).save(
-    #                 head_image_save_path)
-    #             Image.fromarray(head_image_par).save(
-    #                 head_image_par_save_path)  # Face Mask
-    #             Image.fromarray(head_image_msk).save(
-    #                 head_image_msk_save_path)  # Hair Mask
-    #             Image.fromarray(head_pad_mask).save(
-    #                 head_pad_mask_save_path)  # Padding Mask
-    #             Image.fromarray(cropped_img).save(
-    #                 cropped_img_save_path)
-    #             Image.fromarray(cropped_img_par).save(
-    #                 cropped_img_par_save_path)  # Face Mask
-    #             Image.fromarray(cropped_img_msk).save(
-    #                 cropped_img_msk_save_path)  # Hair Mask
-    #             Image.fromarray(cropped_pad_mask).save(
-    #                 cropped_pad_mask_save_path)  # Padding Mask
+                Image.fromarray(head_image).save(
+                    head_image_save_path)
+                Image.fromarray(head_image_par).save(
+                    head_image_par_save_path)  # Face Mask
+                Image.fromarray(head_image_msk).save(
+                    head_image_msk_save_path)  # Hair Mask
+                Image.fromarray(head_pad_mask).save(
+                    head_pad_mask_save_path)  # Padding Mask
+                Image.fromarray(cropped_img).save(
+                    cropped_img_save_path)
+                Image.fromarray(cropped_img_par).save(
+                    cropped_img_par_save_path)  # Face Mask
+                Image.fromarray(cropped_img_msk).save(
+                    cropped_img_msk_save_path)  # Hair Mask
+                Image.fromarray(cropped_pad_mask).save(
+                    cropped_pad_mask_save_path)  # Padding Mask
 
-    #         with open(status_save_path, "w") as f:
-    #             f.write("Done")
+            with open(status_save_path, "w") as f:
+                f.write("Done")
 
-    #     except Exception as e:
-    #         print(f"Error: {idx} {pos1}")
-    #         print(e)
-    #         continue
+        except Exception as e:
+            print(f"Error: {idx} {pos1}")
+            print(e)
+            continue
+
+        idx += 1
