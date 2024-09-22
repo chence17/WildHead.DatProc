@@ -6,7 +6,7 @@ from torchvision.transforms import ToPILImage
 from torchvision.models.segmentation import deeplabv3_resnet101, DeepLabV3_ResNet101_Weights
 from PIL import Image
 from visualize.vis_2d import show_image
-from fastsam import FastSAM, FastSAMPrompt
+# from fastsam import FastSAM, FastSAMPrompt
 
 
 class HeadSegmenter(object):
@@ -23,7 +23,8 @@ class HeadSegmenter(object):
 
         self.use_fsam = use_fsam
         if self.use_fsam:
-            self.fsam_net = FastSAM('assets/FastSAM-x.pt')
+            raise NotImplementedError("FastSAM is not implemented yet.")
+            # self.fsam_net = FastSAM('assets/FastSAM-x.pt')
 
     def __call__(self, ori_img, isBGR, show: bool = False):
         """Get head mask.

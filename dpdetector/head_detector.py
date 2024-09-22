@@ -76,7 +76,10 @@ class HeadDetector(object):
         filtered_boxes = scaled_boxes[(scaled_boxes[:, 3] >= self.size_thres) & (scaled_boxes[:, 2] >= self.size_thres)]
         sorted_indices = np.argsort(filtered_boxes[:, 4])[::-1]
         filtered_boxes = filtered_boxes[sorted_indices]
-        return filtered_boxes[:max_box_num, :4].astype(np.int32)
+        if max_box_num > 0:
+            return filtered_boxes[:max_box_num, :4].astype(np.int32)
+        else:
+            return filtered_boxes[:, :4].astype(np.int32)
 
     @staticmethod
     def rescale_headbox(box, image_w, image_h, factor=1.2, allow_overflow=True):
