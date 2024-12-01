@@ -1,4 +1,4 @@
-# Work.3DHeadGen.DatProc
+# WildHead.DatProc
 ## Refactor
 
 ### `filter`
@@ -21,7 +21,7 @@
 
 ## Misc
 
-Data Processing for PanoHead
+Data Processing for [SphereHead](https://github.com/lhyfst/SphereHead)
 
 ## Notes
 
@@ -48,4 +48,19 @@ pip install dlib
 ```bash
 python dlib_kps.py
 python recrop_images.py -i examples/test/data.pkl -j dataset.json -o examples/test/crop_samples/img
+```
+
+## Citation
+
+If you find our repo helpful, please cite our paper using the following bib:
+
+```
+@misc{li2024spherehead,
+    title={SphereHead: Stable 3D Full-head Synthesis with Spherical Tri-plane Representation},
+    author={Heyuan Li and Ce Chen and Tianhao Shi and Yuda Qiu and Sizhe An and Guanying Chen and Xiaoguang Han},
+    year={2024},
+    eprint={2404.05680},
+    archivePrefix={arXiv},
+    primaryClass={cs.CV}
+}
 ```
